@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Chat</h2>
+
+<div class="chat-container">
+    <div id="messages" class="messages-area">
+        <!-- Mensagens aparecerão aqui -->
+    </div>
+
+    <div class="message-input-area">
+        <form id="message-form">
+            <input type="text" id="message-input" placeholder="Digite sua mensagem..." required>
+            <button type="submit" class="btn btn-primary">Enviar</button>
+        </form>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% endblock %}

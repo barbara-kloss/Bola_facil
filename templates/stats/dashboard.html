@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Dashboard de Estatísticas</h2>
+
+<div class="stats-container">
+    <div class="stat-card">
+        <h3>Total de Apostas</h3>
+        <p class="stat-value">0</p>
+    </div>
+
+    <div class="stat-card">
+        <h3>Taxa de Acerto</h3>
+        <p class="stat-value">0%</p>
+    </div>
+
+    <div class="stat-card">
+        <h3>Pontos Totais</h3>
+        <p class="stat-value">0</p>
+    </div>
+
+    <div class="stat-card">
+        <h3>Sua Posição</h3>
+        <p class="stat-value">--</p>
+    </div>
+</div>
+
+<div id="chart-container">
+    <h3>Evolução de Pontos</h3>
+    <canvas id="pointsChart"></canvas>
+</div>
+
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+{% endblock %}

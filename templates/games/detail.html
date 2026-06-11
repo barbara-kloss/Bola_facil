@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Detalhes do Jogo</h2>
+
+{% if game %}
+    <div class="game-detail">
+        <h3>{{ game.team_a }} vs {{ game.team_b }}</h3>
+        <p>Liga: {{ game.league }}</p>
+        <p>Agendado: {{ game.scheduled_at }}</p>
+        <p>Status: {{ game.status }}</p>
+        
+        {% if game.status == 'finished' %}
+            <p class="score">Placar: {{ game.goals_a }} x {{ game.goals_b }}</p>
+        {% endif %}
+
+        <a href="/bets/form/{{ game.id }}" class="btn btn-primary">Fazer Aposta</a>
+    </div>
+{% endif %}
+{% endblock %}

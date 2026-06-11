@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/ranking.css') }}">
+{% endblock %}
+
+{% block content %}
+<h2>Ranking Geral</h2>
+
+<table class="ranking-table">
+    <thead>
+        <tr>
+            <th>Posição</th>
+            <th>Usuário</th>
+            <th>Pontos</th>
+            <th>Apostas Acertadas</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for rank in rankings %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ rank.username }}</td>
+                <td><strong>{{ rank.total_points }}</strong></td>
+                <td>{{ rank.correct_bets }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script src="{{ url_for('static', filename='js/ranking.js') }}"></script>
+{% endblock %}

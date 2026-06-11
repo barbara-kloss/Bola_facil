@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Jogos Disponíveis</h2>
+
+<div class="games-container">
+    {% for game in games %}
+    <div class="game-card">
+        <h3>{{ game.team_a }} vs {{ game.team_b }}</h3>
+        <p>Liga: {{ game.league }}</p>
+        <p>Agendado para: {{ game.scheduled_at }}</p>
+        <p>Status: {{ game.status }}</p>
+        <a href="/games/{{ game.id }}" class="btn btn-secondary">Ver Detalhes</a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
