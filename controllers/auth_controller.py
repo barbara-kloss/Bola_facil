@@ -5,6 +5,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 
 from models.user import Pool, User
 from utils.helpers import is_valid_email, is_valid_password
+from utils.messages import ApiMessages
 
 
 auth_bp = Blueprint("auth", __name__)
@@ -22,16 +23,15 @@ def login():
         user = User.get_by_email(email)
 
         if not user or not user.check_password(password):
-            message = "E-mail ou senha inválidos."
             if request.is_json:
-                return jsonify({"error": message}), 401
-            flash(message, "error")
+                return jsonify({"error": ApiMessages.AUTH_LOGIN_ERROR}), 401
+            flash(ApiMessages.AUTH_LOGIN_ERROR, "error")
             return render_template("auth/login.html"), 401
 
         login_user(user)
         if request.is_json:
-            return jsonify({"message": "Login realizado com sucesso."})
-        flash("Login realizado com sucesso.", "success")
+            return jsonify({"message": ApiMessages.AUTH_LOGIN_SUCCESS})
+        flash(ApiMessages.AUTH_LOGIN_SUCCESS, "success")
         return redirect(url_for("games.list_games"))
 
     return render_template("auth/login.html")
@@ -50,10 +50,9 @@ def register():
         whatsapp_phone = data.get("whatsapp_phone", "").strip() or None
 
         if not name or not is_valid_email(email) or not is_valid_password(password):
-            message = "Informe nome, e-mail válido e senha com pelo menos 6 caracteres."
             if request.is_json:
-                return jsonify({"error": message}), 400
-            flash(message, "error")
+                return jsonify({"error": ApiMessages.VALIDATION_REQUIRED_FIELD}), 400
+            flash(ApiMessages.VALIDATION_REQUIRED_FIELD, "error")
             return render_template("auth/register.html"), 400
 
         try:
@@ -62,15 +61,14 @@ def register():
                 Pool.create("Bolão Principal", user.id, "Grupo principal do BolãoFácil")
             login_user(user)
         except sqlite3.IntegrityError:
-            message = "Este e-mail já está cadastrado."
             if request.is_json:
-                return jsonify({"error": message}), 409
-            flash(message, "error")
+                return jsonify({"error": ApiMessages.AUTH_REGISTER_ERROR}), 409
+            flash(ApiMessages.AUTH_REGISTER_ERROR, "error")
             return render_template("auth/register.html"), 409
 
         if request.is_json:
-            return jsonify({"message": "Cadastro realizado com sucesso.", "user_id": user.id}), 201
-        flash("Cadastro realizado com sucesso.", "success")
+            return jsonify({"message": ApiMessages.AUTH_REGISTER_SUCCESS, "user_id": user.id}), 201
+        flash(ApiMessages.AUTH_REGISTER_SUCCESS, "success")
         return redirect(url_for("games.list_games"))
 
     return render_template("auth/register.html")
@@ -80,5 +78,5 @@ def register():
 @login_required
 def logout():
     logout_user()
-    flash("Você saiu da sua conta.", "success")
+    flash(ApiMessages.AUTH_LOGOUT_SUCCESS, "success")
     return redirect(url_for("auth.login"))

@@ -1,0 +1,9 @@
+{# Button Component #}
+{# Usage: {% include 'components/button.html' with {'text': 'Click me', 'type': 'primary', 'onclick': 'doSomething()', 'disabled': false} %} #}
+<button 
+  type="{{ button_type or 'button' }}" 
+  class="button-{{ style or 'primary' }}"
+  {% if onclick %}onclick="{{ onclick }}"{% endif %}
+  {% if disabled %}disabled{% endif %}>
+  {{ text }}
+</button>

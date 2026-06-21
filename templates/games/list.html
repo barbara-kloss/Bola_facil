@@ -6,62 +6,112 @@
   <p>{{ pool.name if pool else "Bolão Principal" }}</p>
   <a class="button-secondary" href="{{ url_for('sync_games') }}">Sincronizar Brasileirão</a>
 </section>
-<section class="split-layout">
-  <div class="api-match-board">
-    <div class="match-table-head">
-      <span>Data/Status</span>
-      <span>Oponentes</span>
-      <span>Placar</span>
-      <span></span>
+
+<section class="games-layout">
+  <div class="table-section">
+    <div class="api-match-board">
+      <div class="match-table-head">
+        <span>Data/Status</span>
+        <span>Oponentes</span>
+        <span>Placar</span>
+        <span></span>
+      </div>
+      {% for game in games %}
+        {% set match_time = format_match_time(game.match_datetime) %}
+        <article class="match-row">
+          <div class="match-date">
+            {% if game.status == "finished" %}
+              <span class="status-pill status-finished">FINALIZADO</span>
+            {% else %}
+              <span>{{ match_time.date }}</span>
+              <span>{{ match_time.time }}</span>
+              <span class="status-pill status-{{ game.status }}">{{ match_status_label(game.status, game.api_status) }}</span>
+            {% endif %}
+          </div>
+          <div class="match-opponents">
+            <span class="team-name">
+              {% if game.home_crest %}<img src="{{ game.home_crest }}" alt="">{% endif %}
+              {{ game.home_team }}
+            </span>
+            <strong>vs.</strong>
+            <span class="team-name">
+              {% if game.away_crest %}<img src="{{ game.away_crest }}" alt="">{% endif %}
+              {{ game.away_team }}
+            </span>
+          </div>
+          <div class="match-score">
+            {% if game.home_score is not none and game.away_score is not none %}
+              {{ game.home_score }}:{{ game.away_score }}
+            {% else %}
+              -:-
+            {% endif %}
+          </div>
+          <div class="match-actions">
+            <a class="button-secondary" href="{{ url_for('games.game_detail', game_id=game.id) }}">Detalhes</a>
+            <a class="button-primary" href="{{ url_for('bets.bet_game', game_id=game.id) }}">Palpitar</a>
+          </div>
+        </article>
+      {% else %}
+        <div class="empty-state">Nenhum jogo cadastrado ainda.</div>
+      {% endfor %}
     </div>
-    {% for game in games %}
-      {% set match_time = format_match_time(game.match_datetime) %}
-      <article class="match-row">
-        <div class="match-date">
-          {% if game.status == "finished" %}
-            <span class="status-pill status-finished">FINISHED</span>
-          {% else %}
-            <span>{{ match_time.date }}</span>
-            <span>{{ match_time.time }}</span>
-            <span class="status-pill status-{{ game.status }}">{{ match_status_label(game.status, game.api_status) }}</span>
-          {% endif %}
-        </div>
-        <div class="match-opponents">
-          <span class="team-name">
-            {% if game.home_crest %}<img src="{{ game.home_crest }}" alt="">{% endif %}
-            {{ game.home_team }}
-          </span>
-          <strong>vs.</strong>
-          <span class="team-name">
-            {% if game.away_crest %}<img src="{{ game.away_crest }}" alt="">{% endif %}
-            {{ game.away_team }}
-          </span>
-        </div>
-        <div class="match-score">
-          {% if game.home_score is not none and game.away_score is not none %}
-            {{ game.home_score }}:{{ game.away_score }}
-          {% else %}
-            -:-
-          {% endif %}
-        </div>
-        <div class="match-actions">
-          <a class="button-secondary" href="{{ url_for('games.game_detail', game_id=game.id) }}">Detalhes</a>
-          <a class="button-primary" href="{{ url_for('bets.bet_game', game_id=game.id) }}">Palpitar</a>
-        </div>
-      </article>
-    {% else %}
-      <div class="empty-state">Nenhum jogo cadastrado ainda.</div>
-    {% endfor %}
+
+    {% if total_pages > 1 %}
+      {% set pagination_url = url_for('games.list_games') %}
+      <div class="pagination-wrapper">
+        {% include 'components/pagination.html' %}
+      </div>
+    {% endif %}
   </div>
+
   <form method="post" action="{{ url_for('games.create_game') }}" class="form side-form">
     <h2>Novo jogo manual</h2>
-    <label for="home_team">Mandante</label>
-    <input id="home_team" name="home_team" required>
-    <label for="away_team">Visitante</label>
-    <input id="away_team" name="away_team" required>
-    <label for="match_datetime">Data e hora</label>
-    <input id="match_datetime" name="match_datetime" type="datetime-local" required>
-    <button type="submit">Criar jogo</button>
+    
+    <div class="form-group">
+      <label for="home_team">Mandante</label>
+      <input id="home_team" name="home_team" type="text" required>
+    </div>
+    
+    <div class="form-group">
+      <label for="away_team">Visitante</label>
+      <input id="away_team" name="away_team" type="text" required>
+    </div>
+    
+    <div class="form-group">
+      <label for="match_datetime">Data e hora</label>
+      <input id="match_datetime" name="match_datetime" type="datetime-local" required>
+    </div>
+    
+    <button type="submit" class="button-primary">Criar jogo</button>
   </form>
 </section>
+
+<script>
+// Adicionar feedback visual ao criar jogo
+document.querySelector('form').addEventListener('submit', function(e) {
+  const form = this;
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Criando...';
+  
+  setTimeout(() => {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+  }, 2000);
+});
+
+// Converte os flashes do Flask para toasters
+document.addEventListener('DOMContentLoaded', function() {
+  const flashElements = document.querySelectorAll('.flash');
+  flashElements.forEach(el => {
+    const type = el.className.includes('success') ? 'success' : 
+                 el.className.includes('error') ? 'error' : 'info';
+    const message = el.textContent.trim();
+    Toast[type](message);
+    el.remove();
+  });
+});
+</script>
 {% endblock %}

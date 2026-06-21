@@ -6,9 +6,11 @@ from models.score import Score
 from models.user import Pool, PoolMember
 from services.scoring_service import ScoringService
 from utils.helpers import format_match_time, match_status_label
+from utils.messages import ApiMessages
 
 
 game_bp = Blueprint("games", __name__)
+ITEMS_PER_PAGE = 15
 
 
 def _db():
@@ -30,11 +32,45 @@ def _default_pool():
 @login_required
 def list_games():
     pool = _default_pool()
-    games = Game.list(pool["id"]) if pool else []
+    if not pool:
+        return render_template(
+            "games/list.html",
+            pool=None,
+            games=[],
+            current_page=1,
+            total_pages=1,
+            is_admin=True,
+        )
+
+    # Obter página do query parameter
+    page = request.args.get("page", 1, type=int)
+    if page < 1:
+        page = 1
+
+    # Obter todos os jogos
+    all_games = Game.list(pool["id"]) if pool else []
+
+    # Calcular paginação
+    total_items = len(all_games)
+    total_pages = (total_items + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE
+
+    # Validar página
+    if page > total_pages and total_pages > 0:
+        page = total_pages
+
+    # Paginar os resultados
+    start_idx = (page - 1) * ITEMS_PER_PAGE
+    end_idx = start_idx + ITEMS_PER_PAGE
+    games = all_games[start_idx:end_idx]
+
     return render_template(
         "games/list.html",
         pool=pool,
         games=games,
+        current_page=page,
+        total_pages=total_pages,
+        total_items=total_items,
+        items_per_page=ITEMS_PER_PAGE,
         is_admin=True,
         format_match_time=format_match_time,
         match_status_label=match_status_label,
@@ -46,17 +82,29 @@ def list_games():
 def create_game():
     pool = _default_pool()
     data = request.get_json(silent=True) or request.form
-    game = Game.create(
-        pool["id"],
-        data.get("home_team", "").strip(),
-        data.get("away_team", "").strip(),
-        data.get("match_datetime", "").strip(),
-        data.get("status", "scheduled"),
-    )
-    if request.is_json:
-        return jsonify({"message": "Jogo criado com sucesso.", "game_id": game["id"]}), 201
-    flash("Jogo criado com sucesso.", "success")
-    return redirect(url_for("games.list_games"))
+    
+    try:
+        game = Game.create(
+            pool["id"],
+            data.get("home_team", "").strip(),
+            data.get("away_team", "").strip(),
+            data.get("match_datetime", "").strip(),
+            data.get("status", "scheduled"),
+        )
+        
+        if request.is_json:
+            return jsonify({
+                "message": ApiMessages.GAME_CREATE_SUCCESS,
+                "game_id": game["id"]
+            }), 201
+        
+        flash(ApiMessages.GAME_CREATE_SUCCESS, "success")
+        return redirect(url_for("games.list_games"))
+    except Exception as e:
+        if request.is_json:
+            return jsonify({"message": ApiMessages.GAME_CREATE_ERROR}), 400
+        flash(ApiMessages.GAME_CREATE_ERROR, "error")
+        return redirect(url_for("games.list_games"))
 
 
 @game_bp.route("/games/<int:game_id>")
@@ -64,7 +112,8 @@ def create_game():
 def game_detail(game_id):
     game = Game.get_by_id(game_id)
     if game is None:
-        return jsonify({"error": "Jogo não encontrado."}), 404
+        return jsonify({"error": ApiMessages.GAME_NOT_FOUND}), 404
+    
     ranking = Score.get_ranking(game["pool_id"])
     bets = _db().execute(
         """
@@ -76,6 +125,7 @@ def game_detail(game_id):
         """,
         (game_id,),
     ).fetchall()
+    
     return render_template(
         "games/detail.html",
         game=game,
@@ -90,14 +140,26 @@ def game_detail(game_id):
 @login_required
 def record_result(game_id):
     data = request.get_json(silent=True) or request.form
-    home_score = int(data.get("home_score", 0))
-    away_score = int(data.get("away_score", 0))
-    game = Game.record_result(game_id, home_score, away_score)
-    ScoringService.recalculate_game(game_id)
-    if request.is_json:
-        return jsonify({"message": "Resultado lançado com sucesso.", "game_id": game["id"]})
-    flash("Resultado lançado com sucesso.", "success")
-    return redirect(url_for("games.game_detail", game_id=game_id))
+    
+    try:
+        home_score = int(data.get("home_score", 0))
+        away_score = int(data.get("away_score", 0))
+        game = Game.record_result(game_id, home_score, away_score)
+        ScoringService.recalculate_game(game_id)
+        
+        if request.is_json:
+            return jsonify({
+                "message": ApiMessages.GAME_RESULT_RECORDED,
+                "game_id": game["id"]
+            })
+        
+        flash(ApiMessages.GAME_RESULT_RECORDED, "success")
+        return redirect(url_for("games.game_detail", game_id=game_id))
+    except (ValueError, TypeError):
+        if request.is_json:
+            return jsonify({"message": ApiMessages.GAME_RESULT_ERROR}), 400
+        flash(ApiMessages.GAME_RESULT_ERROR, "error")
+        return redirect(url_for("games.game_detail", game_id=game_id))
 
 
 @game_bp.route("/chat")

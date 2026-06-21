@@ -1,0 +1,10 @@
+{# Alert/Message Component #}
+{# Usage: {% include 'components/alert.html' with {'type': 'success', 'message': 'Operação realizada', 'dismissible': true} %} #}
+<div class="alert alert-{{ type or 'info' }}"{% if dismissible %} role="alert"{% endif %}>
+  <div class="alert-content">
+    {{ message }}
+  </div>
+  {% if dismissible %}
+    <button class="alert-close" type="button" aria-label="Fechar alerta">&times;</button>
+  {% endif %}
+</div>

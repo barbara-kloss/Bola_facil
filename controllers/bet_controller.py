@@ -4,6 +4,7 @@ from flask_login import current_user, login_required
 from models.bet import Bet
 from models.game import Game
 from models.user import PoolMember
+from utils.messages import ApiMessages
 
 
 bet_bp = Blueprint("bets", __name__, url_prefix="/bets")
@@ -23,10 +24,9 @@ def bet_game(game_id):
     if request.method == "POST":
         data = request.get_json(silent=True) or request.form
         if game["status"] == "finished":
-            message = "Palpites encerrados para este jogo."
             if request.is_json:
-                return jsonify({"error": message}), 400
-            flash(message, "error")
+                return jsonify({"error": ApiMessages.BET_CLOSED}), 400
+            flash(ApiMessages.BET_CLOSED, "error")
             return render_template("bets/form.html", game=game, bet=existing_bet), 400
 
         try:
@@ -36,16 +36,15 @@ def bet_game(game_id):
             home_score = away_score = -1
 
         if home_score < 0 or away_score < 0:
-            message = "O placar não pode ser negativo."
             if request.is_json:
-                return jsonify({"error": message}), 400
-            flash(message, "error")
+                return jsonify({"error": ApiMessages.BET_INVALID}), 400
+            flash(ApiMessages.BET_INVALID, "error")
             return render_template("bets/form.html", game=game, bet=existing_bet), 400
 
         bet = Bet.create(current_user.id, game_id, home_score, away_score)
         if request.is_json:
-            return jsonify({"message": "Palpite salvo com sucesso.", "bet_id": bet["id"]})
-        flash("Palpite salvo com sucesso.", "success")
+            return jsonify({"message": ApiMessages.BET_CREATE_SUCCESS, "bet_id": bet["id"]})
+        flash(ApiMessages.BET_CREATE_SUCCESS, "success")
         return redirect(url_for("games.game_detail", game_id=game_id))
 
     return render_template("bets/form.html", game=game, bet=existing_bet)

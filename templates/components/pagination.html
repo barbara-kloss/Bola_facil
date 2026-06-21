@@ -1,0 +1,25 @@
+{# Pagination Component #}
+{# Variables needed: current_page, total_pages, pagination_url #}
+{% if total_pages > 1 %}
+  <div class="pagination">
+    {% if current_page > 1 %}
+      <a href="{{ pagination_url }}?page=1" class="pagination-link">Primeira</a>
+      <a href="{{ pagination_url }}?page={{ current_page - 1 }}" class="pagination-link">← Anterior</a>
+    {% endif %}
+
+    {% for page_num in range(1, total_pages + 1) %}
+      {% if page_num >= current_page - 2 and page_num <= current_page + 2 %}
+        {% if page_num == current_page %}
+          <span class="pagination-current">{{ page_num }}</span>
+        {% else %}
+          <a href="{{ pagination_url }}?page={{ page_num }}" class="pagination-link">{{ page_num }}</a>
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+
+    {% if current_page < total_pages %}
+      <a href="{{ pagination_url }}?page={{ current_page + 1 }}" class="pagination-link">Próxima →</a>
+      <a href="{{ pagination_url }}?page={{ total_pages }}" class="pagination-link">Última</a>
+    {% endif %}
+  </div>
+{% endif %}

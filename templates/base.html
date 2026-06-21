@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/toaster.css') }}">
   {% block styles %}{% endblock %}
 </head>
 <body>
@@ -46,6 +47,7 @@
   </main>
 
   <footer class="footer">{{ brand_slogan }}</footer>
+  <script src="{{ url_for('static', filename='js/toaster.js') }}"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

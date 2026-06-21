@@ -5,11 +5,43 @@
   <h1>{{ game.home_team }} x {{ game.away_team }}</h1>
   <p>Informe seu placar antes do encerramento do jogo.</p>
 </section>
-<form method="post" class="form score-form">
-  <label for="predicted_home_score">{{ game.home_team }}</label>
-  <input id="predicted_home_score" name="predicted_home_score" type="number" min="0" required value="{{ bet.predicted_home_score if bet else 0 }}">
-  <label for="predicted_away_score">{{ game.away_team }}</label>
-  <input id="predicted_away_score" name="predicted_away_score" type="number" min="0" required value="{{ bet.predicted_away_score if bet else 0 }}">
-  <button type="submit">Salvar palpite</button>
+
+<form method="post" class="form score-form" id="bet-form">
+  <div class="form-group">
+    <label for="predicted_home_score">{{ game.home_team }}</label>
+    <input id="predicted_home_score" name="predicted_home_score" type="number" min="0" max="20" required value="{{ bet.predicted_home_score if bet else 0 }}">
+  </div>
+  
+  <div class="form-group">
+    <label for="predicted_away_score">{{ game.away_team }}</label>
+    <input id="predicted_away_score" name="predicted_away_score" type="number" min="0" max="20" required value="{{ bet.predicted_away_score if bet else 0 }}">
+  </div>
+  
+  <button type="submit" class="button-primary">Salvar palpite</button>
 </form>
+
+<script>
+document.getElementById('bet-form').addEventListener('submit', function(e) {
+  const btn = this.querySelector('button[type="submit"]');
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+  
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.textContent = original;
+  }, 1500);
+});
+
+// Converte flashes para toasters
+document.addEventListener('DOMContentLoaded', function() {
+  const flashElements = document.querySelectorAll('.flash');
+  flashElements.forEach(el => {
+    const type = el.className.includes('success') ? 'success' : 'error';
+    const message = el.textContent.trim();
+    Toast[type](message);
+    el.remove();
+  });
+});
+</script>
 {% endblock %}
