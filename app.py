@@ -17,6 +17,7 @@ from controllers.notification_controller import notification_bp
 from models.user import User
 from services.football_service import FootballService
 from utils.decorators import admin_required
+from utils.csrf import generate_csrf_token, validate_csrf_token
 
 
 login_manager = LoginManager()
@@ -175,7 +176,25 @@ def create_app(config_object=None):
             "brand_name": "BolãoFácil",
             "brand_slogan": "Jogue Junto. Torça. Ganhe.",
             "current_user": current_user,
+            "csrf_token": generate_csrf_token,
         }
+
+    # CSRF: verifica token em todos os POSTs que NÃO sejam JSON puro de API
+    # (rotas de webhook ou API interna ficam de fora via flag no blueprint)
+    CSRF_EXEMPT_PATHS = {"/whatsapp/webhook"}
+
+    @app.before_request
+    def csrf_check():
+        if app.config.get("TESTING"):
+            return
+        if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            if request.path in CSRF_EXEMPT_PATHS:
+                return
+            if not validate_csrf_token():
+                if request.is_json:
+                    return jsonify({"error": "Token CSRF inválido ou ausente."}), 403
+                flash("Sessão expirada. Por favor, tente novamente.", "error")
+                return redirect(request.referrer or url_for("auth.login"))
 
     @app.route("/")
     def index():

@@ -70,6 +70,7 @@
 
   {% if current_user.is_admin %}
   <form method="post" action="{{ url_for('games.create_game') }}" class="form side-form">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <h2>Novo jogo manual</h2>
     
     <div class="form-group">

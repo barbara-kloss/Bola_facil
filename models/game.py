@@ -65,13 +65,16 @@ class Game:
 
     @staticmethod
     def record_result(game_id, home_score, away_score, status="finished"):
+        if int(home_score) < 0 or int(away_score) < 0:
+            raise ValueError("O placar não pode conter valores negativos")
+            
         _db().execute(
             """
             UPDATE games
                SET home_score = ?, away_score = ?, status = ?, updated_at = CURRENT_TIMESTAMP
              WHERE id = ?
             """,
-            (home_score, away_score, status, game_id),
+            (int(home_score), int(away_score), status, game_id),
         )
         _db().commit()
         return Game.get_by_id(game_id)

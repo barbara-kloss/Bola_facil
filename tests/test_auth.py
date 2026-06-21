@@ -48,7 +48,7 @@ def test_login_with_valid_credentials(client):
         "/register",
         json={"name": "Login User", "email": "login@example.com", "password": "senha123"},
     )
-    client.get("/logout")
+    client.post("/logout")
     response = client.post(
         "/login",
         json={"email": "login@example.com", "password": "senha123"},
@@ -65,7 +65,7 @@ def test_first_user_is_admin(app, client):
     )
     
     # Must logout because /register redirects if already logged in
-    client.get("/logout")
+    client.post("/logout")
     
     # Second user
     client.post(

@@ -7,6 +7,7 @@
 </section>
 
 <form method="post" class="form score-form" id="bet-form">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
   <div class="form-group">
     <label for="predicted_home_score">{{ game.home_team }}</label>
     <input id="predicted_home_score" name="predicted_home_score" type="number" min="0" max="20" required value="{{ bet.predicted_home_score if bet else 0 }}">

@@ -1,4 +1,4 @@
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from models.game import Game
@@ -7,6 +7,7 @@ from models.user import Pool, PoolMember
 from services.scoring_service import ScoringService
 from utils.helpers import format_match_time, match_status_label
 from utils.messages import ApiMessages
+from utils.responses import respond
 
 
 game_bp = Blueprint("games", __name__)
@@ -94,31 +95,31 @@ def create_game():
             data.get("match_datetime", "").strip(),
             data.get("status", "scheduled"),
         )
-        
-        # Notificar todos os usuários (exceto o admin atual) sobre o novo jogo
-        users = _db().execute("SELECT id FROM users WHERE id != ?", (current_user.id,)).fetchall()
-        for u in users:
+
+        # Notificar apenas membros do bolão ao qual o jogo pertence
+        pool_users = _db().execute(
+            "SELECT user_id FROM pool_members WHERE pool_id = ? AND user_id != ?",
+            (pool["id"], current_user.id),
+        ).fetchall()
+        for u in pool_users:
             Notification.create(
-                user_id=u["id"],
+                user_id=u["user_id"],
                 type="new_game",
                 title="Novo Jogo Adicionado!",
-                body=f"{game['home_team']} vs {game['away_team']}",
+                body=f"{game['home_team']} vs {game['away_team']} — clique para palpitar!",
                 extra_data={"game_id": game["id"]}
             )
 
-        if request.is_json:
-            return jsonify({
-                "message": ApiMessages.GAME_CREATE_SUCCESS,
-                "game_id": game["id"]
-            }), 201
-        
-        flash(ApiMessages.GAME_CREATE_SUCCESS, "success")
-        return redirect(url_for("games.list_games"))
-    except Exception as e:
-        if request.is_json:
-            return jsonify({"message": ApiMessages.GAME_CREATE_ERROR}), 400
-        flash(ApiMessages.GAME_CREATE_ERROR, "error")
-        return redirect(url_for("games.list_games"))
+        return respond(
+            ApiMessages.GAME_CREATE_SUCCESS,
+            ok=True, status=201, redirect_to="games.list_games",
+            data={"game_id": game["id"]},
+        )
+    except Exception:
+        return respond(
+            ApiMessages.GAME_CREATE_ERROR,
+            ok=False, redirect_to="games.list_games",
+        )
 
 
 @game_bp.route("/games/<int:game_id>")
@@ -127,6 +128,10 @@ def game_detail(game_id):
     game = Game.get_by_id(game_id)
     if game is None:
         return jsonify({"error": ApiMessages.GAME_NOT_FOUND}), 404
+    
+    if not current_user.is_admin and not PoolMember.exists(game["pool_id"], current_user.id):
+        from flask import abort
+        abort(403)
     
     ranking = Score.get_ranking(game["pool_id"])
     bets = _db().execute(
@@ -155,25 +160,32 @@ def game_detail(game_id):
 def record_result(game_id):
     data = request.get_json(silent=True) or request.form
     
+    game = Game.get_by_id(game_id)
+    if not game:
+        return respond("Jogo não encontrado.", ok=False, status=404, redirect_to="games.list_games")
+        
+    if game["status"] in ["finished", "cancelled"]:
+        return respond("Não é possível registrar resultado para jogos já finalizados ou cancelados.", ok=False, redirect_to=url_for("games.game_detail", game_id=game_id))
+    
     try:
         home_score = int(data.get("home_score", 0))
         away_score = int(data.get("away_score", 0))
+        
+        if home_score < 0 or away_score < 0:
+            raise ValueError("Placar não pode ser negativo")
+            
         game = Game.record_result(game_id, home_score, away_score)
         ScoringService.recalculate_game(game_id)
-        
-        if request.is_json:
-            return jsonify({
-                "message": ApiMessages.GAME_RESULT_RECORDED,
-                "game_id": game["id"]
-            })
-        
-        flash(ApiMessages.GAME_RESULT_RECORDED, "success")
-        return redirect(url_for("games.game_detail", game_id=game_id))
+        return respond(
+            ApiMessages.GAME_RESULT_RECORDED,
+            ok=True, redirect_to=url_for("games.game_detail", game_id=game_id),
+            data={"game_id": game["id"]},
+        )
     except (ValueError, TypeError):
-        if request.is_json:
-            return jsonify({"message": ApiMessages.GAME_RESULT_ERROR}), 400
-        flash(ApiMessages.GAME_RESULT_ERROR, "error")
-        return redirect(url_for("games.game_detail", game_id=game_id))
+        return respond(
+            ApiMessages.GAME_RESULT_ERROR,
+            ok=False, redirect_to=url_for("games.game_detail", game_id=game_id),
+        )
 
 
 @game_bp.route("/chat")

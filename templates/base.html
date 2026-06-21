@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/toaster.css') }}">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   {% block styles %}{% endblock %}
 </head>
 <body>
@@ -36,7 +37,10 @@
           </a>
         {% endif %}
         <a href="{{ url_for('auth.profile') }}">Perfil</a>
-        <a href="{{ url_for('auth.logout') }}">Sair</a>
+        <form method="post" action="{{ url_for('auth.logout') }}" style="display: inline; margin: 0;">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="nav-logout-btn">Sair</button>
+        </form>
       </nav>
     {% endif %}
   </header>
@@ -61,6 +65,25 @@
 
   <footer class="footer">{{ brand_slogan }}</footer>
   <script src="{{ url_for('static', filename='js/toaster.js') }}"></script>
+  <script>
+    // Monkey-patch fetch para adicionar o token CSRF
+    const originalFetch = window.fetch;
+    window.fetch = function() {
+      let [resource, config] = arguments;
+      if (config && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(config.method)) {
+        config.headers = config.headers || {};
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (csrfToken && !(config.headers instanceof Headers && config.headers.has('X-CSRFToken'))) {
+          if (config.headers instanceof Headers) {
+            config.headers.append('X-CSRFToken', csrfToken);
+          } else {
+            config.headers['X-CSRFToken'] = csrfToken;
+          }
+        }
+      }
+      return originalFetch(resource, config);
+    };
+  </script>
   {% if current_user.is_authenticated %}
   <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
   {% endif %}

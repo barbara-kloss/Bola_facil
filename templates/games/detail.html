@@ -21,6 +21,7 @@
 </section>
 {% if current_user.is_admin %}
 <form method="post" action="{{ url_for('games.record_result', game_id=game.id) }}" class="form result-form">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
   <label for="home_score">Gols {{ game.home_team }}</label>
   <input id="home_score" name="home_score" type="number" min="0" required>
   <label for="away_score">Gols {{ game.away_team }}</label>
