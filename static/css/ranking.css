@@ -1,42 +1,48 @@
-/* Estilos para Ranking */
-
-.ranking-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
-    overflow: hidden;
+:root {
+  --gold: #FFD700;
+  --silver: #C0C0C0;
+  --bronze: #CD7F32;
 }
 
-.ranking-table thead {
-    background-color: #4CAF50;
-    color: white;
+.ranking-wrap {
+  background: var(--white);
+  border-radius: 8px;
+  overflow-x: auto;
+  padding: 16px;
 }
 
-.ranking-table th {
-    padding: 1rem;
-    text-align: left;
-    font-weight: 600;
+.ranking-table tr.current-user {
+  background: var(--blue-light);
+  outline: 2px solid var(--green);
 }
 
-.ranking-table td {
-    padding: 1rem;
-    border-bottom: 1px solid #eee;
+.rank-badge {
+  align-items: center;
+  background: var(--blue-light);
+  border-radius: 999px;
+  color: var(--blue-dark);
+  display: inline-flex;
+  font-weight: 800;
+  height: 34px;
+  justify-content: center;
+  min-width: 34px;
 }
 
-.ranking-table tbody tr:hover {
-    background-color: #f5f5f5;
+.rank-1 { background: var(--gold); color: var(--blue-dark); }
+.rank-2 { background: var(--silver); color: var(--blue-dark); }
+.rank-3 { background: var(--bronze); color: var(--white); }
+
+.ranking-status {
+  border-radius: 999px;
+  color: var(--white);
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 6px 10px;
+  text-transform: uppercase;
 }
 
-.ranking-table tbody tr:nth-child(1) {
-    background-color: #ffd700;
-}
-
-.ranking-table tbody tr:nth-child(2) {
-    background-color: #c0c0c0;
-}
-
-.ranking-table tbody tr:nth-child(3) {
-    background-color: #cd7f32;
-}
+.status-live { background: var(--green); }
+.status-progress { background: var(--blue); }
+.status-premium { background: var(--yellow); color: var(--blue-dark); }
+.status-finished { background: var(--gray-dark); }

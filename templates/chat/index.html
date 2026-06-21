@@ -1,20 +1,18 @@
 {% extends "base.html" %}
-
+{% block title %}Chat - {{ brand_name }}{% endblock %}
 {% block content %}
-<h2>Chat</h2>
-
-<div class="chat-container">
-    <div id="messages" class="messages-area">
-        <!-- Mensagens aparecerão aqui -->
-    </div>
-
-    <div class="message-input-area">
-        <form id="message-form">
-            <input type="text" id="message-input" placeholder="Digite sua mensagem..." required>
-            <button type="submit" class="btn btn-primary">Enviar</button>
-        </form>
-    </div>
-</div>
-
+<section class="content-head">
+  <h1>Chat</h1>
+  <p>Converse com o grupo durante a rodada.</p>
+</section>
+<section class="chat-shell">
+  <div id="chatMessages" class="chat-messages"></div>
+  <form id="chatForm" class="chat-form">
+    <input id="chatInput" type="text" placeholder="Mensagem" autocomplete="off" required>
+    <button type="submit">Enviar</button>
+  </form>
+</section>
+{% endblock %}
+{% block scripts %}
 <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 {% endblock %}

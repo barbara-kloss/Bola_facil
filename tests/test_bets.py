@@ -1,30 +1,80 @@
-"""
-Testes para sistema de apostas
-"""
+import sys
+from pathlib import Path
 
-import unittest
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-class TestBets(unittest.TestCase):
-    """Testes do sistema de apostas"""
-    
-    def setUp(self):
-        """Configuração antes de cada teste"""
-        pass
-    
-    def test_create_bet(self):
-        """Testa criação de aposta"""
-        # TODO: Implementar teste
-        pass
-    
-    def test_get_user_bets(self):
-        """Testa obtenção de apostas do usuário"""
-        # TODO: Implementar teste
-        pass
-    
-    def test_get_game_bets(self):
-        """Testa obtenção de apostas de um jogo"""
-        # TODO: Implementar teste
-        pass
+import pytest
 
-if __name__ == '__main__':
-    unittest.main()
+from app import create_app
+from config import Config
+from models.game import Game
+from models.user import Pool
+
+
+class TestConfig(Config):
+    TESTING = True
+
+
+@pytest.fixture
+def app(tmp_path):
+    TestConfig.DATABASE_URL = str(tmp_path / "test.db")
+    app = create_app(TestConfig)
+    yield app
+
+
+@pytest.fixture
+def client(app):
+    return app.test_client()
+
+
+def login_user(client):
+    client.post(
+        "/register",
+        json={"name": "Apostador", "email": "apostador@example.com", "password": "senha123"},
+    )
+
+
+def create_game(app):
+    with app.app_context():
+        pool = Pool.get_default()
+        game = Game.create(pool["id"], "Brasil", "Argentina", "2026-07-01T18:00")
+        return game["id"]
+
+
+def test_create_bet(client, app):
+    login_user(client)
+    game_id = create_game(app)
+    response = client.post(
+        f"/bets/game/{game_id}",
+        json={"predicted_home_score": 2, "predicted_away_score": 1},
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["message"] == "Palpite salvo com sucesso."
+
+
+def test_reject_negative_bet(client, app):
+    login_user(client)
+    game_id = create_game(app)
+    response = client.post(
+        f"/bets/game/{game_id}",
+        json={"predicted_home_score": -1, "predicted_away_score": 1},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json()["error"] == "O placar não pode ser negativo."
+
+
+def test_block_bet_after_finished_game(client, app):
+    login_user(client)
+    game_id = create_game(app)
+    with app.app_context():
+        Game.record_result(game_id, 1, 0)
+
+    response = client.post(
+        f"/bets/game/{game_id}",
+        json={"predicted_home_score": 1, "predicted_away_score": 0},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json()["error"] == "Palpites encerrados para este jogo."

@@ -1,10 +1,7 @@
-"""
-Modelos de dados da aplicação
-"""
+from models.bet import Bet
+from models.game import Game
+from models.score import Score
+from models.user import Pool, PoolMember, User
 
-from .user import User
-from .game import Game
-from .bet import Bet
-from .score import Score
 
-__all__ = ['User', 'Game', 'Bet', 'Score']
+__all__ = ["Bet", "Game", "Pool", "PoolMember", "Score", "User"]

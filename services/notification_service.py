@@ -1,40 +1,30 @@
-"""
-Serviço de Notificações
-"""
+from services.whatsapp_service import WhatsAppService
+
 
 class NotificationService:
-    """Serviço para gerenciar notificações"""
-    
     @staticmethod
-    def notify_game_started(game):
-        """
-        Notifica usuários quando um jogo começa
-        
-        Args:
-            game: Objeto do jogo
-        """
-        # TODO: Enviar notificações
-        pass
-    
+    def notify_new_game(users, game):
+        message = f"Novo jogo no BolãoFácil: {game['home_team']} x {game['away_team']}."
+        return NotificationService._notify_users(users, message)
+
     @staticmethod
-    def notify_game_finished(game):
-        """
-        Notifica usuários quando um jogo termina
-        
-        Args:
-            game: Objeto do jogo
-        """
-        # TODO: Enviar notificações
-        pass
-    
+    def notify_result(users, game):
+        message = (
+            f"Resultado lançado: {game['home_team']} {game['home_score']} x "
+            f"{game['away_score']} {game['away_team']}."
+        )
+        return NotificationService._notify_users(users, message)
+
     @staticmethod
-    def notify_bet_results(user_id, results):
-        """
-        Notifica usuário sobre resultados de suas apostas
-        
-        Args:
-            user_id: ID do usuário
-            results: Resultados das apostas
-        """
-        # TODO: Enviar notificações
-        pass
+    def notify_pending_bet(users, game):
+        message = f"Não esqueça seu palpite: {game['home_team']} x {game['away_team']}."
+        return NotificationService._notify_users(users, message)
+
+    @staticmethod
+    def _notify_users(users, message):
+        results = []
+        for user in users:
+            phone = user["whatsapp_phone"] if isinstance(user, dict) else user.whatsapp_phone
+            if phone:
+                results.append(WhatsAppService.send_message(phone, message))
+        return results

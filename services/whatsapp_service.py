@@ -1,52 +1,27 @@
-"""
-Serviço de Integração WhatsApp
-"""
+import logging
 
 import requests
-from config import Config
+from flask import current_app
+
+
+logger = logging.getLogger(__name__)
+
 
 class WhatsAppService:
-    """Serviço para integração com API WhatsApp"""
-    
-    BASE_URL = "https://graph.instagram.com/v17.0/me/messages"
-    
     @staticmethod
-    def send_message(phone_number, message):
-        """
-        Envia mensagem via WhatsApp
-        
-        Args:
-            phone_number: Número do telefone no formato internacional
-            message: Conteúdo da mensagem
-            
-        Returns:
-            bool: True se enviado com sucesso
-        """
-        headers = {
-            "Authorization": f"Bearer {Config.WHATSAPP_API_TOKEN}",
-            "Content-Type": "application/json"
-        }
-        
-        payload = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": phone_number,
-            "type": "text",
-            "text": {"body": message}
-        }
-        
-        # TODO: Implementar envio de mensagem
-        # response = requests.post(self.BASE_URL, json=payload, headers=headers)
-        return True
-    
-    @staticmethod
-    def send_notification(users, message):
-        """
-        Envia notificação para múltiplos usuários
-        
-        Args:
-            users: Lista de usuários
-            message: Mensagem a enviar
-        """
-        # TODO: Enviar mensagem para cada usuário
-        pass
+    def send_message(phone, message):
+        api_url = current_app.config.get("WHATSAPP_API_URL")
+        api_token = current_app.config.get("WHATSAPP_API_TOKEN")
+
+        if not api_url or not api_token:
+            logger.info("WhatsApp não configurado. Mensagem para %s: %s", phone, message)
+            return {"sent": False, "fallback": "log"}
+
+        response = requests.post(
+            api_url,
+            json={"to": phone, "message": message},
+            headers={"Authorization": f"Bearer {api_token}"},
+            timeout=10,
+        )
+        response.raise_for_status()
+        return {"sent": True, "status_code": response.status_code}

@@ -1,44 +1,64 @@
 # BolãoFácil
 
-Sistema de gerenciamento de apostas e rankings para bolões de futebol.
+Jogue Junto. Torça. Ganhe.
 
-## Funcionalidades
+Aplicação Flask para gerenciar bolões de futebol com cadastro de usuários, jogos, palpites, ranking, chat simples e notificações via WhatsApp.
+Também integra a API football-data.org para sincronizar jogos do Brasileirão Série A (`BSA`) e salvar os dados localmente.
 
-- 👤 Autenticação e cadastro de usuários
-- ⚽ Gerenciamento de jogos e campeonatos
-- 💰 Sistema de apostas e palpites
-- 🏆 Rankings e pontuação
-- 💬 Chat integrado
-- 📊 Dashboard de estatísticas
-- 📱 Integração com WhatsApp
+## Estrutura
 
-## Estrutura do Projeto
+- `app.py`: factory `create_app()`, blueprints, Flask-Login e inicialização do SQLite.
+- `controllers/`: rotas de autenticação, jogos, palpites, ranking e WhatsApp.
+- `models/`: data-access layer com `sqlite3` puro.
+- `services/`: pontuação, notificações e integração WhatsApp.
+- `services/football_service.py`: cliente football-data.org, sincronização local e limite de 10 req/min.
+- `database/`: schema SQLite e seed.
+- `templates/`, `static/`: interface em pt-BR.
+- `tests/`: testes com pytest e banco SQLite temporário.
 
+## Setup
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+python database/seed.py
+python app.py
 ```
-bolao_facil/
-├── models/              # Modelos de dados
-├── controllers/         # Controladores (lógica de negócio)
-├── templates/           # Templates HTML
-├── static/              # Arquivos estáticos (CSS, JS, imagens)
-├── services/            # Serviços auxiliares
-├── utils/               # Utilitários e decoradores
-├── database/            # Configuração do banco de dados
-└── tests/               # Testes unitários
+
+Acesse `http://127.0.0.1:5000/login`.
+
+Usuários do seed usam a senha `senha123`.
+
+## Sincronizar jogos reais
+
+Configure no `.env`:
+
+```env
+FOOTBALL_API_KEY=seu-token
+FOOTBALL_API_URL=https://api.football-data.org/v4
 ```
 
-## Instalação
+Com o app rodando e logado, acesse:
 
-1. Clone o repositório
-2. Crie um ambiente virtual: `python -m venv venv`
-3. Ative o ambiente: `venv\Scripts\activate` (Windows) ou `source venv/bin/activate` (Linux/Mac)
-4. Instale as dependências: `pip install -r requirements.txt`
-5. Customize o arquivo `.env` com suas configurações
-6. Execute: `python app.py`
+```text
+http://127.0.0.1:5000/admin/sync-games
+```
 
-## Uso
+A aplicação salva os jogos no SQLite e as telas usam o banco local, evitando chamadas à API em cada request.
 
-Acesse `http://localhost:5000` no seu navegador.
+## Testes
 
-## Licença
+```bash
+pytest tests/
+```
 
-MIT
+## Regras de pontuação
+
+| Acerto | Pontos |
+| --- | ---: |
+| Placar exato | 10 |
+| Vencedor e gols de um time | 5 |
+| Somente vencedor | 3 |
+| Empate sem placar exato | 2 |
+| Erro total | 0 |

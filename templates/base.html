@@ -1,34 +1,51 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BolãoFácil - Sistema de Apostas</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
-    {% block extra_css %}{% endblock %}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ brand_name }}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  {% block styles %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar">
-        <div class="container">
-            <h1 class="logo">BolãoFácil</h1>
-            <ul class="nav-links">
-                <li><a href="/">Home</a></li>
-                <li><a href="/games">Jogos</a></li>
-                <li><a href="/ranking">Ranking</a></li>
-                <li><a href="/auth/logout">Logout</a></li>
-            </ul>
-        </div>
-    </nav>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('games.list_games') if current_user.is_authenticated else url_for('auth.login') }}">
+      <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="{{ brand_name }}">
+      <span>{{ brand_name }}</span>
+    </a>
+    {% if current_user.is_authenticated %}
+      <nav class="nav">
+        <a href="{{ url_for('games.list_games') }}">Jogos</a>
+        <a href="{{ url_for('ranking.index') }}">Ranking</a>
+        <a href="{{ url_for('games.chat') }}">Chat</a>
+        <a href="{{ url_for('stats_dashboard') }}">Estatísticas</a>
+        <a href="{{ url_for('auth.logout') }}">Sair</a>
+      </nav>
+    {% endif %}
+  </header>
 
-    <main class="container">
-        {% block content %}{% endblock %}
-    </main>
+  <main class="page">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <section class="flash-list">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </section>
+      {% endif %}
+    {% endwith %}
 
-    <footer>
-        <p>&copy; 2024 BolãoFácil. Todos os direitos reservados.</p>
-    </footer>
+    {% if error_message %}
+      <section class="empty-state">{{ error_message }}</section>
+    {% endif %}
 
-    <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
-    {% block extra_js %}{% endblock %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">{{ brand_slogan }}</footer>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

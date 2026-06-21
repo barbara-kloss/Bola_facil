@@ -1,35 +1,172 @@
-"""
-BolãoFácil - Aplicação Principal
-Sistema de gerenciamento de apostas e rankings
-"""
+import os
+import sqlite3
+from pathlib import Path
 
-from flask import Flask, render_template, request, jsonify
-from config import Config
-from controllers import auth_controller, game_controller, bet_controller, ranking_controller
+from flask import Flask, flash, g, jsonify, redirect, render_template, request, url_for
+from flask_login import LoginManager, current_user, login_required
 
-app = Flask(__name__)
-app.config.from_object(Config)
+from config import DevelopmentConfig
+from controllers.auth_controller import auth_bp
+from controllers.bet_controller import bet_bp
+from controllers.game_controller import game_bp
+from controllers.ranking_controller import ranking_bp
+from controllers.whatsapp_controller import whatsapp_bp
+from models.user import User
+from services.football_service import FootballService
 
-# Registrar blueprints
-app.register_blueprint(auth_controller.auth_bp)
-app.register_blueprint(game_controller.game_bp)
-app.register_blueprint(bet_controller.bet_bp)
-app.register_blueprint(ranking_controller.ranking_bp)
 
-@app.route('/')
-def index():
-    """Página inicial da aplicação"""
-    return render_template('base.html')
+login_manager = LoginManager()
+login_manager.login_view = "auth.login"
+login_manager.login_message = "Faça login para continuar."
 
-@app.errorhandler(404)
-def not_found(error):
-    """Tratamento de página não encontrada"""
-    return jsonify({'error': 'Página não encontrada'}), 404
 
-@app.errorhandler(500)
-def internal_error(error):
-    """Tratamento de erro interno do servidor"""
-    return jsonify({'error': 'Erro interno do servidor'}), 500
+def get_db():
+    if "db" not in g:
+        database_url = current_app_config()["DATABASE_URL"]
+        database_path = Path(database_url)
+        database_path.parent.mkdir(parents=True, exist_ok=True)
+        g.db = sqlite3.connect(database_path)
+        g.db.row_factory = sqlite3.Row
+        g.db.execute("PRAGMA foreign_keys = ON")
+    return g.db
 
-if __name__ == '__main__':
-    app.run(debug=True)
+
+def current_app_config():
+    from flask import current_app
+
+    return current_app.config
+
+
+def init_database(app):
+    database_path = Path(app.config["DATABASE_URL"])
+    database_path.parent.mkdir(parents=True, exist_ok=True)
+    schema_path = Path(app.root_path) / "database" / "schema.sql"
+
+    with sqlite3.connect(database_path) as connection:
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA foreign_keys = ON")
+        has_users = connection.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'users'"
+        ).fetchone()
+        if not has_users:
+            connection.executescript(schema_path.read_text(encoding="utf-8"))
+            connection.commit()
+        ensure_schema_updates(connection)
+
+
+def ensure_schema_updates(connection):
+    columns = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(games)").fetchall()
+    }
+    additions = {
+        "external_match_id": "ALTER TABLE games ADD COLUMN external_match_id INTEGER",
+        "competition_code": "ALTER TABLE games ADD COLUMN competition_code TEXT",
+        "competition_name": "ALTER TABLE games ADD COLUMN competition_name TEXT",
+        "matchday": "ALTER TABLE games ADD COLUMN matchday INTEGER",
+        "home_crest": "ALTER TABLE games ADD COLUMN home_crest TEXT",
+        "away_crest": "ALTER TABLE games ADD COLUMN away_crest TEXT",
+        "api_status": "ALTER TABLE games ADD COLUMN api_status TEXT",
+        "last_synced_at": "ALTER TABLE games ADD COLUMN last_synced_at TEXT",
+    }
+    for column, statement in additions.items():
+        if column not in columns:
+            connection.execute(statement)
+
+    indexes = [
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_games_external_match_id ON games(external_match_id)",
+        "CREATE INDEX IF NOT EXISTS idx_games_competition_code ON games(competition_code)",
+    ]
+    for statement in indexes:
+        connection.execute(statement)
+    connection.commit()
+
+
+def create_app(config_object=None):
+    app = Flask(__name__)
+    app.config.from_object(config_object or DevelopmentConfig)
+
+    init_database(app)
+
+    login_manager.init_app(app)
+
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(game_bp)
+    app.register_blueprint(bet_bp)
+    app.register_blueprint(ranking_bp)
+    app.register_blueprint(whatsapp_bp)
+
+    @app.teardown_appcontext
+    def close_db(error=None):
+        db = g.pop("db", None)
+        if db is not None:
+            db.close()
+
+    @app.context_processor
+    def inject_brand():
+        return {
+            "brand_name": "BolãoFácil",
+            "brand_slogan": "Jogue Junto. Torça. Ganhe.",
+            "current_user": current_user,
+        }
+
+    @app.route("/")
+    def index():
+        if current_user.is_authenticated:
+            return redirect(url_for("games.list_games"))
+        return redirect(url_for("auth.login"))
+
+    @app.route("/stats")
+    def stats_dashboard():
+        db = get_db()
+        stats = {
+            "total_pools": db.execute("SELECT COUNT(*) FROM pools").fetchone()[0],
+            "total_bets": db.execute("SELECT COUNT(*) FROM bets").fetchone()[0],
+            "total_points": db.execute("SELECT COALESCE(SUM(points_earned), 0) FROM bets").fetchone()[0],
+        }
+        return render_template("stats/dashboard.html", stats=stats)
+
+    @app.route("/admin/sync-games", methods=["GET", "POST"])
+    @login_required
+    def sync_games():
+        try:
+            synced_games = FootballService.sync_matches_to_db()
+        except Exception as exc:
+            if request.accept_mimetypes.best == "application/json":
+                return jsonify({"error": str(exc)}), 502
+            flash(f"Não foi possível sincronizar jogos: {exc}", "error")
+            return redirect(url_for("games.list_games"))
+
+        if request.accept_mimetypes.best == "application/json":
+            return jsonify({"message": "Jogos sincronizados.", "count": len(synced_games)})
+        flash(f"{len(synced_games)} jogos sincronizados com a football-data.org.", "success")
+        return redirect(url_for("games.list_games"))
+
+    @app.errorhandler(403)
+    def forbidden(error):
+        if request.accept_mimetypes.best == "application/json":
+            return jsonify({"error": "Acesso negado."}), 403
+        return render_template("base.html", error_message="Acesso negado."), 403
+
+    @app.errorhandler(404)
+    def not_found(error):
+        if request.accept_mimetypes.best == "application/json":
+            return jsonify({"error": "Página não encontrada."}), 404
+        return render_template("base.html", error_message="Página não encontrada."), 404
+
+    @app.errorhandler(500)
+    def internal_error(error):
+        if request.accept_mimetypes.best == "application/json":
+            return jsonify({"error": "Erro interno do servidor."}), 500
+        return render_template("base.html", error_message="Erro interno do servidor."), 500
+
+    return app
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get_by_id(user_id)
+
+
+if __name__ == "__main__":
+    create_app().run(debug=os.environ.get("FLASK_DEBUG", "1") == "1")

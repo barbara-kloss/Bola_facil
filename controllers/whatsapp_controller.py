@@ -1,28 +1,29 @@
-"""
-Controlador de Integração WhatsApp
-"""
+from flask import Blueprint, jsonify, request
+from flask_login import login_required
 
-from flask import Blueprint, request, jsonify
 from services.whatsapp_service import WhatsAppService
 
-whatsapp_bp = Blueprint('whatsapp', __name__, url_prefix='/whatsapp')
 
-@whatsapp_bp.route('/webhook', methods=['POST'])
+whatsapp_bp = Blueprint("whatsapp", __name__, url_prefix="/whatsapp")
+
+
+def _db():
+    from app import get_db
+
+    return get_db()
+
+
+@whatsapp_bp.route("/webhook", methods=["POST"])
 def webhook():
-    """Webhook para receber mensagens do WhatsApp"""
-    data = request.get_json()
-    
-    # TODO: Processar mensagem recebida
-    
-    return jsonify({'status': 'received'})
+    payload = request.get_json(silent=True) or {}
+    return jsonify({"received": True, "payload": payload})
 
-@whatsapp_bp.route('/send', methods=['POST'])
-def send_message():
-    """Enviar mensagem via WhatsApp"""
-    data = request.get_json()
-    phone = data.get('phone')
-    message = data.get('message')
-    
-    # TODO: Enviar mensagem usando WhatsAppService
-    
-    return jsonify({'message': 'Mensagem enviada'})
+
+@whatsapp_bp.route("/notify", methods=["POST"])
+@login_required
+def notify():
+    data = request.get_json(silent=True) or {}
+    message = data.get("message", "Mensagem do BolãoFácil.")
+    users = _db().execute("SELECT whatsapp_phone FROM users WHERE whatsapp_phone IS NOT NULL").fetchall()
+    results = [WhatsAppService.send_message(user["whatsapp_phone"], message) for user in users]
+    return jsonify({"sent": len(results), "results": results})

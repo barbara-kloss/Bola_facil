@@ -1,26 +1,58 @@
-"""
-Testes para autenticação
-"""
+import sys
+from pathlib import Path
 
-import unittest
-from utils.helpers import validate_email, hash_password, verify_password
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-class TestAuth(unittest.TestCase):
-    """Testes de autenticação"""
-    
-    def test_validate_email_valid(self):
-        """Testa validação de email válido"""
-        self.assertTrue(validate_email('usuario@example.com'))
-    
-    def test_validate_email_invalid(self):
-        """Testa validação de email inválido"""
-        self.assertFalse(validate_email('email_invalido'))
-    
-    def test_hash_password(self):
-        """Testa hashing de senha"""
-        password = "senha123"
-        hashed = hash_password(password)
-        self.assertIsNotNone(hashed)
+import sqlite3
+from pathlib import Path
 
-if __name__ == '__main__':
-    unittest.main()
+import pytest
+
+from app import create_app
+from config import Config
+
+
+class TestConfig(Config):
+    TESTING = True
+    WTF_CSRF_ENABLED = False
+
+
+@pytest.fixture
+def app(tmp_path):
+    TestConfig.DATABASE_URL = str(tmp_path / "test.db")
+    app = create_app(TestConfig)
+    yield app
+
+
+@pytest.fixture
+def client(app):
+    return app.test_client()
+
+
+def test_register_creates_user_and_logs_in(client):
+    response = client.post(
+        "/register",
+        json={
+            "name": "Teste User",
+            "email": "teste@example.com",
+            "password": "senha123",
+            "whatsapp_phone": "11999999999",
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.get_json()["message"] == "Cadastro realizado com sucesso."
+
+
+def test_login_with_valid_credentials(client):
+    client.post(
+        "/register",
+        json={"name": "Login User", "email": "login@example.com", "password": "senha123"},
+    )
+    response = client.post(
+        "/login",
+        json={"email": "login@example.com", "password": "senha123"},
+    )
+
+    assert response.status_code == 200
+    assert response.get_json()["message"] == "Login realizado com sucesso."

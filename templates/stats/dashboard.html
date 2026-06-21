@@ -1,34 +1,17 @@
 {% extends "base.html" %}
-
+{% block title %}Estatísticas - {{ brand_name }}{% endblock %}
 {% block content %}
-<h2>Dashboard de Estatísticas</h2>
-
-<div class="stats-container">
-    <div class="stat-card">
-        <h3>Total de Apostas</h3>
-        <p class="stat-value">0</p>
-    </div>
-
-    <div class="stat-card">
-        <h3>Taxa de Acerto</h3>
-        <p class="stat-value">0%</p>
-    </div>
-
-    <div class="stat-card">
-        <h3>Pontos Totais</h3>
-        <p class="stat-value">0</p>
-    </div>
-
-    <div class="stat-card">
-        <h3>Sua Posição</h3>
-        <p class="stat-value">--</p>
-    </div>
-</div>
-
-<div id="chart-container">
-    <h3>Evolução de Pontos</h3>
-    <canvas id="pointsChart"></canvas>
-</div>
-
+<section class="content-head">
+  <h1>Estatísticas</h1>
+  <p>Acompanhe o movimento do bolão.</p>
+</section>
+<section class="stats-grid">
+  <article class="stat-card"><span>Bolões</span><strong>{{ stats.total_pools }}</strong></article>
+  <article class="stat-card"><span>Palpites</span><strong>{{ stats.total_bets }}</strong></article>
+  <article class="stat-card"><span>Pontos</span><strong>{{ stats.total_points }}</strong></article>
+</section>
+<canvas id="pointsChart" class="chart" width="900" height="320" data-values="[{{ stats.total_pools }},{{ stats.total_bets }},{{ stats.total_points }}]"></canvas>
+{% endblock %}
+{% block scripts %}
 <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
 {% endblock %}

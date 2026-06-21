@@ -1,22 +1,18 @@
 {% extends "base.html" %}
-
+{% block title %}Entrar - {{ brand_name }}{% endblock %}
 {% block content %}
-<div class="auth-container">
-    <h2>Login</h2>
-    <form id="login-form" method="POST">
-        <div class="form-group">
-            <label for="username">Usuário:</label>
-            <input type="text" id="username" name="username" required>
-        </div>
-
-        <div class="form-group">
-            <label for="password">Senha:</label>
-            <input type="password" id="password" name="password" required>
-        </div>
-
-        <button type="submit" class="btn btn-primary">Entrar</button>
+<section class="auth-layout">
+  <div class="auth-panel">
+    <h1>Entrar</h1>
+    <p>{{ brand_slogan }}</p>
+    <form method="post" class="form">
+      <label for="email">E-mail</label>
+      <input id="email" name="email" type="email" autocomplete="email" required>
+      <label for="password">Senha</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <button type="submit">Entrar</button>
     </form>
-
-    <p>Não possui conta? <a href="/auth/register">Registre-se aqui</a></p>
-</div>
+    <a class="text-link" href="{{ url_for('auth.register') }}">Criar conta</a>
+  </div>
+</section>
 {% endblock %}

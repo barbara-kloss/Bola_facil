@@ -1,46 +1,25 @@
-/**
- * Charts - BolãoFácil
- * Módulo para gráficos e visualizações
- */
+const canvas = document.querySelector("#pointsChart");
 
-class ChartsModule {
-    constructor() {
-        this.colors = ['#4CAF50', '#2196F3', '#FF9800', '#F44336'];
-    }
+if (canvas) {
+  const ctx = canvas.getContext("2d");
+  const values = JSON.parse(canvas.dataset.values || "[0,0,0]");
+  const labels = ["Bolões", "Palpites", "Pontos"];
+  const max = Math.max(...values, 1);
+  const width = canvas.width;
+  const height = canvas.height;
+  const barWidth = 120;
+  const gap = 90;
 
-    /**
-     * Cria um gráfico de evolução de pontos
-     */
-    createPointsChart(containerId, data) {
-        const ctx = document.getElementById(containerId);
-        if (!ctx) return;
-
-        // TODO: Implementar gráfico com Chart.js ou similar
-        console.log('Criando gráfico de pontos', data);
-    }
-
-    /**
-     * Cria um gráfico de apostas
-     */
-    createBetsChart(containerId, data) {
-        const ctx = document.getElementById(containerId);
-        if (!ctx) return;
-
-        // TODO: Implementar gráfico
-        console.log('Criando gráfico de apostas', data);
-    }
-
-    /**
-     * Cria um gráfico de comparação
-     */
-    createComparisonChart(containerId, data) {
-        const ctx = document.getElementById(containerId);
-        if (!ctx) return;
-
-        // TODO: Implementar gráfico
-        console.log('Criando gráfico de comparação', data);
-    }
+  ctx.clearRect(0, 0, width, height);
+  ctx.font = "600 16px Montserrat, Arial";
+  values.forEach((value, index) => {
+    const barHeight = Math.max(8, (value / max) * 210);
+    const x = 80 + index * (barWidth + gap);
+    const y = height - barHeight - 54;
+    ctx.fillStyle = ["#00A651", "#1A55A0", "#FFD700"][index];
+    ctx.fillRect(x, y, barWidth, barHeight);
+    ctx.fillStyle = "#003087";
+    ctx.fillText(String(value), x + 42, y - 12);
+    ctx.fillText(labels[index], x + 16, height - 24);
+  });
 }
-
-// Inicializar módulo
-const chartsModule = new ChartsModule();

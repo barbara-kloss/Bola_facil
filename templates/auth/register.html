@@ -1,37 +1,22 @@
 {% extends "base.html" %}
-
+{% block title %}Cadastro - {{ brand_name }}{% endblock %}
 {% block content %}
-<div class="auth-container">
-    <h2>Registrar Novo Usuário</h2>
-    <form id="register-form" method="POST">
-        <div class="form-group">
-            <label for="username">Usuário:</label>
-            <input type="text" id="username" name="username" required>
-        </div>
-
-        <div class="form-group">
-            <label for="email">Email:</label>
-            <input type="email" id="email" name="email" required>
-        </div>
-
-        <div class="form-group">
-            <label for="phone">Telefone (WhatsApp):</label>
-            <input type="tel" id="phone" name="phone">
-        </div>
-
-        <div class="form-group">
-            <label for="password">Senha:</label>
-            <input type="password" id="password" name="password" required>
-        </div>
-
-        <div class="form-group">
-            <label for="password_confirm">Confirmar Senha:</label>
-            <input type="password" id="password_confirm" name="password_confirm" required>
-        </div>
-
-        <button type="submit" class="btn btn-primary">Registrar</button>
+<section class="auth-layout">
+  <div class="auth-panel">
+    <h1>Criar conta</h1>
+    <p>Entre no bolão e acompanhe seus pontos rodada a rodada.</p>
+    <form method="post" class="form">
+      <label for="name">Nome</label>
+      <input id="name" name="name" type="text" autocomplete="name" required>
+      <label for="email">E-mail</label>
+      <input id="email" name="email" type="email" autocomplete="email" required>
+      <label for="whatsapp_phone">WhatsApp</label>
+      <input id="whatsapp_phone" name="whatsapp_phone" type="tel" autocomplete="tel">
+      <label for="password">Senha</label>
+      <input id="password" name="password" type="password" autocomplete="new-password" minlength="6" required>
+      <button type="submit">Cadastrar</button>
     </form>
-
-    <p>Já possui conta? <a href="/auth/login">Faça login aqui</a></p>
-</div>
+    <a class="text-link" href="{{ url_for('auth.login') }}">Já tenho conta</a>
+  </div>
+</section>
 {% endblock %}

@@ -1,32 +1,32 @@
 {% extends "base.html" %}
-
-{% block extra_css %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/ranking.css') }}">
+{% block title %}Ranking - {{ brand_name }}{% endblock %}
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ranking.css') }}">
 {% endblock %}
-
 {% block content %}
-<h2>Ranking Geral</h2>
-
-<table class="ranking-table">
-    <thead>
-        <tr>
-            <th>Posição</th>
-            <th>Usuário</th>
-            <th>Pontos</th>
-            <th>Apostas Acertadas</th>
-        </tr>
-    </thead>
+<section class="content-head">
+  <h1>Ranking</h1>
+  <p>{{ pool.name if pool else "Bolão Principal" }}</p>
+</section>
+<section class="ranking-wrap">
+  <table class="ranking-table" data-current-user-id="{{ current_user.id }}">
+    <thead><tr><th>Posição</th><th>Jogador</th><th>Palpites</th><th>Pontos</th><th>Status</th></tr></thead>
     <tbody>
-        {% for rank in rankings %}
-            <tr>
-                <td>{{ loop.index }}</td>
-                <td>{{ rank.username }}</td>
-                <td><strong>{{ rank.total_points }}</strong></td>
-                <td>{{ rank.correct_bets }}</td>
-            </tr>
-        {% endfor %}
+      {% for row in ranking %}
+        <tr data-user-id="{{ row.user_id }}">
+          <td><span class="rank-badge rank-{{ loop.index }}">{{ loop.index }}</span></td>
+          <td>{{ row.name }}</td>
+          <td>{{ row.bets_count }}</td>
+          <td>{{ row.total_points }}</td>
+          <td><span class="ranking-status status-premium">Bolão Premium</span></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5">Ranking vazio.</td></tr>
+      {% endfor %}
     </tbody>
-</table>
-
+  </table>
+</section>
+{% endblock %}
+{% block scripts %}
 <script src="{{ url_for('static', filename='js/ranking.js') }}"></script>
 {% endblock %}

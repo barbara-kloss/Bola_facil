@@ -1,4 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <circle cx="50" cy="50" r="48" fill="#4CAF50" stroke="#333" stroke-width="2"/>
-  <text x="50" y="65" font-size="48" font-weight="bold" text-anchor="middle" fill="white" font-family="Arial">⚽</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="BolãoFácil">
+  <rect width="128" height="128" rx="20" fill="#26344f"/>
+  <rect x="16" y="24" width="96" height="80" rx="10" fill="#003087"/>
+  <rect x="16" y="24" width="96" height="22" rx="10" fill="#000000"/>
+  <path d="M20 46h88" stroke="#000000" stroke-width="8"/>
+  <circle cx="46" cy="72" r="18" fill="#ffffff"/>
+  <path d="M46 54v36M28 72h36M33 59l26 26M59 59L33 85" stroke="#00A651" stroke-width="4" stroke-linecap="round"/>
+  <text x="73" y="69" fill="#ffffff" font-family="Montserrat, Arial, sans-serif" font-size="16" font-weight="800">B</text>
+  <text x="72" y="89" fill="#FFD700" font-family="Montserrat, Arial, sans-serif" font-size="18" font-weight="800">F</text>
+  <path d="M74 98h24" stroke="#FFD700" stroke-width="5" stroke-linecap="round"/>
 </svg>

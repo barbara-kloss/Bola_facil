@@ -1,40 +1,51 @@
-"""
-Controlador de Apostas
-"""
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
 
-from flask import Blueprint, render_template, request, jsonify
+from models.bet import Bet
+from models.game import Game
+from models.user import PoolMember
 
-bet_bp = Blueprint('bet', __name__, url_prefix='/bets')
 
-@bet_bp.route('/form/<int:game_id>', methods=['GET'])
-def bet_form(game_id):
-    """Formulário para fazer uma aposta"""
-    # TODO: Buscar jogo e dados do usuário
-    game = None
-    return render_template('bets/form.html', game=game)
+bet_bp = Blueprint("bets", __name__, url_prefix="/bets")
 
-@bet_bp.route('/create', methods=['POST'])
-def create_bet():
-    """Criar nova aposta"""
-    data = request.get_json()
-    user_id = data.get('user_id')
-    game_id = data.get('game_id')
-    prediction = data.get('prediction')
-    
-    # TODO: Validar e criar aposta
-    
-    return jsonify({'message': 'Aposta realizada com sucesso'})
 
-@bet_bp.route('/user/<int:user_id>', methods=['GET'])
-def user_bets(user_id):
-    """Listar apostas de um usuário"""
-    # TODO: Buscar apostas do usuário
-    bets = []
-    return jsonify({'bets': bets})
+@bet_bp.route("/game/<int:game_id>", methods=["GET", "POST"])
+@login_required
+def bet_game(game_id):
+    game = Game.get_by_id(game_id)
+    if game is None:
+        return jsonify({"error": "Jogo não encontrado."}), 404
+    if not PoolMember.exists(game["pool_id"], current_user.id):
+        PoolMember.add(game["pool_id"], current_user.id)
 
-@bet_bp.route('/game/<int:game_id>', methods=['GET'])
-def game_bets(game_id):
-    """Listar todas as apostas de um jogo"""
-    # TODO: Buscar apostas do jogo
-    bets = []
-    return jsonify({'bets': bets})
+    existing_bet = Bet.get_by_user_and_game(current_user.id, game_id)
+
+    if request.method == "POST":
+        data = request.get_json(silent=True) or request.form
+        if game["status"] == "finished":
+            message = "Palpites encerrados para este jogo."
+            if request.is_json:
+                return jsonify({"error": message}), 400
+            flash(message, "error")
+            return render_template("bets/form.html", game=game, bet=existing_bet), 400
+
+        try:
+            home_score = int(data.get("predicted_home_score"))
+            away_score = int(data.get("predicted_away_score"))
+        except (TypeError, ValueError):
+            home_score = away_score = -1
+
+        if home_score < 0 or away_score < 0:
+            message = "O placar não pode ser negativo."
+            if request.is_json:
+                return jsonify({"error": message}), 400
+            flash(message, "error")
+            return render_template("bets/form.html", game=game, bet=existing_bet), 400
+
+        bet = Bet.create(current_user.id, game_id, home_score, away_score)
+        if request.is_json:
+            return jsonify({"message": "Palpite salvo com sucesso.", "bet_id": bet["id"]})
+        flash("Palpite salvo com sucesso.", "success")
+        return redirect(url_for("games.game_detail", game_id=game_id))
+
+    return render_template("bets/form.html", game=game, bet=existing_bet)
