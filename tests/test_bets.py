@@ -41,6 +41,9 @@ def create_game(app):
         return game["id"]
 
 
+from utils.messages import ApiMessages
+
+
 def test_create_bet(client, app):
     login_user(client)
     game_id = create_game(app)
@@ -50,7 +53,7 @@ def test_create_bet(client, app):
     )
 
     assert response.status_code == 200
-    assert response.get_json()["message"] == "Palpite salvo com sucesso."
+    assert response.get_json()["message"] == ApiMessages.BET_CREATE_SUCCESS
 
 
 def test_reject_negative_bet(client, app):
@@ -62,7 +65,7 @@ def test_reject_negative_bet(client, app):
     )
 
     assert response.status_code == 400
-    assert response.get_json()["error"] == "O placar não pode ser negativo."
+    assert response.get_json()["error"] == ApiMessages.BET_INVALID
 
 
 def test_block_bet_after_finished_game(client, app):
@@ -77,4 +80,5 @@ def test_block_bet_after_finished_game(client, app):
     )
 
     assert response.status_code == 400
-    assert response.get_json()["error"] == "Palpites encerrados para este jogo."
+    assert response.get_json()["error"] == ApiMessages.BET_CLOSED
+

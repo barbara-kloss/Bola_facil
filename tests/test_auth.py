@@ -29,6 +29,9 @@ def client(app):
     return app.test_client()
 
 
+from utils.messages import ApiMessages
+
+
 def test_register_creates_user_and_logs_in(client):
     response = client.post(
         "/register",
@@ -41,7 +44,7 @@ def test_register_creates_user_and_logs_in(client):
     )
 
     assert response.status_code == 201
-    assert response.get_json()["message"] == "Cadastro realizado com sucesso."
+    assert response.get_json()["message"] == ApiMessages.AUTH_REGISTER_SUCCESS
 
 
 def test_login_with_valid_credentials(client):
@@ -55,4 +58,5 @@ def test_login_with_valid_credentials(client):
     )
 
     assert response.status_code == 200
-    assert response.get_json()["message"] == "Login realizado com sucesso."
+    assert response.get_json()["message"] == ApiMessages.AUTH_LOGIN_SUCCESS
+
