@@ -59,6 +59,13 @@ def register():
             flash(ApiMessages.VALIDATION_REQUIRED_FIELD, "error")
             return render_template("auth/register.html"), 400
 
+        existing_user = User.get_by_email(email)
+        if existing_user:
+            if request.is_json:
+                return jsonify({"error": "E-mail já cadastrado"}), 409
+            flash("E-mail já cadastrado", "error")
+            return render_template("auth/register.html"), 409
+
         try:
             user = User.create(name, email, password, whatsapp_phone)
             if Pool.get_default() is None:
@@ -98,6 +105,15 @@ def update_profile():
     # Update name, email, phone
     name = data.get("name", current_user.name).strip()
     email = data.get("email", current_user.email).strip()
+    
+    if email != current_user.email:
+        existing_user = User.get_by_email(email)
+        if existing_user:
+            if request.is_json:
+                return jsonify({"error": "E-mail já cadastrado por outro usuário"}), 409
+            flash("E-mail já cadastrado por outro usuário", "error")
+            return redirect(url_for("auth.profile"))
+
     whatsapp_phone = data.get("whatsapp_phone", "").strip() or None
     if whatsapp_phone:
         whatsapp_phone = ''.join(filter(str.isdigit, whatsapp_phone))

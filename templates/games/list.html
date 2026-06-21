@@ -50,7 +50,9 @@
           </div>
           <div class="match-actions">
             <a class="button-secondary" href="{{ url_for('games.game_detail', game_id=game.id) }}">Detalhes</a>
+            {% if game.status != 'finished' %}
             <a class="button-primary" href="{{ url_for('bets.bet_game', game_id=game.id) }}">Palpitar</a>
+            {% endif %}
           </div>
         </article>
       {% else %}
@@ -92,19 +94,21 @@
 
 <script>
 // Adicionar feedback visual ao criar jogo
-document.querySelector('form').addEventListener('submit', function(e) {
-  const form = this;
-  const submitBtn = form.querySelector('button[type="submit"]');
-  const originalText = submitBtn.textContent;
-  
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Criando...';
-  
-  setTimeout(() => {
-    submitBtn.disabled = false;
-    submitBtn.textContent = originalText;
-  }, 2000);
-});
+const form = document.querySelector('form.side-form');
+if (form) {
+  form.addEventListener('submit', function(e) {
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Criando...';
+    
+    setTimeout(() => {
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }, 2000);
+  });
+}
 
 // Converte os flashes do Flask para toasters
 document.addEventListener('DOMContentLoaded', function() {

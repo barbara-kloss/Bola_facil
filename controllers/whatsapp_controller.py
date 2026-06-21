@@ -19,8 +19,10 @@ def webhook():
     return jsonify({"received": True, "payload": payload})
 
 
+from utils.decorators import admin_required
+
 @whatsapp_bp.route("/notify", methods=["POST"])
-@login_required
+@admin_required
 def notify():
     data = request.get_json(silent=True) or {}
     message = data.get("message", "Mensagem do BolãoFácil.")

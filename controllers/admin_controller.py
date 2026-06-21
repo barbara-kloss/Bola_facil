@@ -22,3 +22,19 @@ def alerts():
     from models.notification import Notification
     all_alerts = Notification.list_all(100)
     return render_template("admin/alerts.html", alerts=all_alerts)
+
+
+@admin_bp.route("/admin/users/<int:user_id>/role", methods=["POST"])
+@admin_required
+def toggle_role(user_id):
+    if str(user_id) == str(current_user.id):
+        return jsonify({"error": "Você não pode alterar seu próprio privilégio."}), 400
+        
+    user = User.get_by_id(user_id)
+    if not user:
+        return jsonify({"error": "Usuário não encontrado."}), 404
+        
+    new_role = "user" if user.is_admin else "admin"
+    User.update_role(user_id, new_role)
+    
+    return jsonify({"success": True, "new_role": new_role})

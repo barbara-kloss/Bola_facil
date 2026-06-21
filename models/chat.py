@@ -116,9 +116,24 @@ class ChatGroupInvite:
 
     @staticmethod
     def accept_all_for_user(user_id, email):
+        from models.notification import Notification
+        from models.user import User
+        
         invites = ChatGroupInvite.get_by_email(email)
         for inv in invites:
             ChatGroupMember.add(inv["group_id"], user_id)
+            group = ChatGroup.get_by_id(inv["group_id"])
+            inviter = User.get_by_id(inv["invited_by"])
+            inviter_name = inviter.name if inviter else "Alguém"
+            
+            Notification.create(
+                user_id=user_id,
+                type="group_invite",
+                title="Novo Convite de Grupo",
+                body=f"{inviter_name} te adicionou ao grupo {group['name']}.",
+                extra_data={"group_id": inv["group_id"]}
+            )
+            
         if invites:
             _db().execute("DELETE FROM chat_group_invites WHERE email = ?", (email.lower(),))
             _db().commit()

@@ -39,7 +39,7 @@ def list_games():
             games=[],
             current_page=1,
             total_pages=1,
-            is_admin=True,
+            is_admin=current_user.is_admin,
         )
 
     # Obter página do query parameter
@@ -71,7 +71,7 @@ def list_games():
         total_pages=total_pages,
         total_items=total_items,
         items_per_page=ITEMS_PER_PAGE,
-        is_admin=True,
+        is_admin=current_user.is_admin,
         format_match_time=format_match_time,
         match_status_label=match_status_label,
     )

@@ -15,6 +15,7 @@
         <th style="padding: 1rem;">WhatsApp</th>
         <th style="padding: 1rem;">Papel</th>
         <th style="padding: 1rem;">Criado em</th>
+        <th style="padding: 1rem;">Ações</th>
       </tr>
     </thead>
     <tbody>
@@ -26,9 +27,18 @@
         <td style="padding: 1rem;" class="phone-number">{{ u.whatsapp_phone or '-' }}</td>
         <td style="padding: 1rem;">{{ 'Admin' if u.is_admin else 'Usuário' }}</td>
         <td style="padding: 1rem;">{{ u.created_at }}</td>
+        <td style="padding: 1rem;">
+          {% if u.id|string != current_user.id|string %}
+          <button class="button-secondary toggle-role-btn" data-user-id="{{ u.id }}">
+            {{ 'Remover Admin' if u.is_admin else 'Tornar Admin' }}
+          </button>
+          {% else %}
+          <span style="color: var(--text-color-muted); font-size: 0.85rem;">Você</span>
+          {% endif %}
+        </td>
       </tr>
       {% else %}
-      <tr><td colspan="6" style="padding: 1rem; text-align: center;">Nenhum usuário cadastrado.</td></tr>
+      <tr><td colspan="7" style="padding: 1rem; text-align: center;">Nenhum usuário cadastrado.</td></tr>
       {% endfor %}
     </tbody>
   </table>
@@ -44,6 +54,32 @@ document.querySelectorAll('.phone-number').forEach(el => {
       el.textContent = `(${text.substring(0,2)}) ${text.substring(2,6)}-${text.substring(6)}`;
     }
   }
+});
+
+document.querySelectorAll('.toggle-role-btn').forEach(btn => {
+  btn.addEventListener('click', async function() {
+    const userId = this.getAttribute('data-user-id');
+    const originalText = this.textContent;
+    this.disabled = true;
+    this.textContent = 'Aguarde...';
+    
+    try {
+      const res = await fetch(`/admin/users/${userId}/role`, { method: 'POST' });
+      const data = await res.json();
+      
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        Toast.error(data.error || 'Erro ao alterar papel.');
+        this.disabled = false;
+        this.textContent = originalText;
+      }
+    } catch (err) {
+      Toast.error('Erro de conexão.');
+      this.disabled = false;
+      this.textContent = originalText;
+    }
+  });
 });
 </script>
 {% endblock %}

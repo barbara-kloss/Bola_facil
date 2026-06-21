@@ -90,6 +90,13 @@ class User(UserMixin):
             (name, email.lower(), whatsapp_phone, user_id),
         )
         _db().commit()
+    @staticmethod
+    def update_role(user_id, role):
+        _db().execute(
+            "UPDATE users SET role = ? WHERE id = ?",
+            (role, user_id),
+        )
+        _db().commit()
         return User.get_by_id(user_id)
 
     def check_password(self, password):

@@ -16,7 +16,7 @@ def bot_chat():
 @chat_bp.route("/chat/bot/send", methods=["POST"])
 @login_required
 def send_bot_message():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     text = data.get("text", "").strip()
     if not text:
         return jsonify({"error": "Mensagem vazia"}), 400
@@ -62,7 +62,7 @@ def send_group_message(group_id):
     if not ChatGroupMember.exists(group_id, current_user.id):
         return jsonify({"error": "Não autorizado"}), 403
     
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     text = data.get("text", "").strip()
     if not text:
         return jsonify({"error": "Mensagem vazia"}), 400
@@ -76,7 +76,7 @@ def invite_to_group(group_id):
     if not ChatGroupMember.exists(group_id, current_user.id):
         return jsonify({"error": "Não autorizado"}), 403
     
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     email = data.get("email", "").strip()
     if not email:
         return jsonify({"error": "E-mail vazio"}), 400
@@ -100,6 +100,17 @@ def invite_to_group(group_id):
         return jsonify({"message": "Usuário adicionado com sucesso!"})
     else:
         from models.chat import ChatGroupInvite
+        from services.email_service import EmailService
+        
         ChatGroupInvite.add(group_id, email, current_user.id)
-        # Aqui enviaria um e-mail real com um link de convite.
-        return jsonify({"message": f"Convite salvo! O usuário será adicionado ao grupo automaticamente quando se cadastrar com o e-mail {email}."})
+        group = ChatGroup.get_by_id(group_id)
+        
+        register_url = request.host_url.rstrip("/") + "/cadastro"
+        EmailService.send_group_invite(
+            to_email=email,
+            inviter_name=current_user.name,
+            group_name=group["name"],
+            register_url=register_url
+        )
+        
+        return jsonify({"message": f"Convite enviado para {email}! O usuário receberá um e-mail com instruções e será adicionado ao grupo ao criar sua conta."})
