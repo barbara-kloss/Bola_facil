@@ -28,3 +28,13 @@ def pool_admin_required(view):
         return view(*args, **kwargs)
 
     return wrapped
+
+
+def admin_required(view):
+    @wraps(view)
+    @login_required
+    def wrapped(*args, **kwargs):
+        if not current_user.is_admin:
+            abort(403)
+        return view(*args, **kwargs)
+    return wrapped

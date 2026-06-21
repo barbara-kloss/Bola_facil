@@ -10,7 +10,7 @@ import pytest
 
 from app import create_app
 from config import Config
-
+from utils.messages import ApiMessages
 
 class TestConfig(Config):
     TESTING = True
@@ -27,10 +27,6 @@ def app(tmp_path):
 @pytest.fixture
 def client(app):
     return app.test_client()
-
-
-from utils.messages import ApiMessages
-
 
 def test_register_creates_user_and_logs_in(client):
     response = client.post(
@@ -52,6 +48,7 @@ def test_login_with_valid_credentials(client):
         "/register",
         json={"name": "Login User", "email": "login@example.com", "password": "senha123"},
     )
+    client.get("/logout")
     response = client.post(
         "/login",
         json={"email": "login@example.com", "password": "senha123"},
@@ -60,3 +57,25 @@ def test_login_with_valid_credentials(client):
     assert response.status_code == 200
     assert response.get_json()["message"] == ApiMessages.AUTH_LOGIN_SUCCESS
 
+def test_first_user_is_admin(app, client):
+    # First user
+    client.post(
+        "/register",
+        json={"name": "Admin User", "email": "admin@example.com", "password": "senha123"},
+    )
+    
+    # Must logout because /register redirects if already logged in
+    client.get("/logout")
+    
+    # Second user
+    client.post(
+        "/register",
+        json={"name": "Normal User", "email": "normal@example.com", "password": "senha123"},
+    )
+
+    with app.app_context():
+        from models.user import User
+        admin = User.get_by_email("admin@example.com")
+        normal = User.get_by_email("normal@example.com")
+        assert admin.is_admin is True
+        assert normal.is_admin is False

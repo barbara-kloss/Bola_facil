@@ -77,8 +77,11 @@ def list_games():
     )
 
 
+from utils.decorators import admin_required
+from models.notification import Notification
+
 @game_bp.route("/games/create", methods=["POST"])
-@login_required
+@admin_required
 def create_game():
     pool = _default_pool()
     data = request.get_json(silent=True) or request.form
@@ -92,6 +95,17 @@ def create_game():
             data.get("status", "scheduled"),
         )
         
+        # Notificar todos os usuários (exceto o admin atual) sobre o novo jogo
+        users = _db().execute("SELECT id FROM users WHERE id != ?", (current_user.id,)).fetchall()
+        for u in users:
+            Notification.create(
+                user_id=u["id"],
+                type="new_game",
+                title="Novo Jogo Adicionado!",
+                body=f"{game['home_team']} vs {game['away_team']}",
+                extra_data={"game_id": game["id"]}
+            )
+
         if request.is_json:
             return jsonify({
                 "message": ApiMessages.GAME_CREATE_SUCCESS,
@@ -137,7 +151,7 @@ def game_detail(game_id):
 
 
 @game_bp.route("/games/<int:game_id>/result", methods=["POST"])
-@login_required
+@admin_required
 def record_result(game_id):
     data = request.get_json(silent=True) or request.form
     

@@ -4,7 +4,9 @@
 <section class="content-head">
   <h1>Jogos</h1>
   <p>{{ pool.name if pool else "Bolão Principal" }}</p>
+  {% if current_user.is_admin %}
   <a class="button-secondary" href="{{ url_for('sync_games') }}">Sincronizar Brasileirão</a>
+  {% endif %}
 </section>
 
 <section class="games-layout">
@@ -64,6 +66,7 @@
     {% endif %}
   </div>
 
+  {% if current_user.is_admin %}
   <form method="post" action="{{ url_for('games.create_game') }}" class="form side-form">
     <h2>Novo jogo manual</h2>
     
@@ -84,6 +87,7 @@
     
     <button type="submit" class="button-primary">Criar jogo</button>
   </form>
+  {% endif %}
 </section>
 
 <script>

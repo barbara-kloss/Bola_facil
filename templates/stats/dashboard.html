@@ -6,11 +6,19 @@
   <p>Acompanhe o movimento do bolão.</p>
 </section>
 <section class="stats-grid">
-  <article class="stat-card"><span>Bolões</span><strong>{{ stats.total_pools }}</strong></article>
-  <article class="stat-card"><span>Palpites</span><strong>{{ stats.total_bets }}</strong></article>
-  <article class="stat-card"><span>Pontos</span><strong>{{ stats.total_points }}</strong></article>
+  <article class="stat-card"><span>Bolões</span><strong class="format-number">{{ stats.total_pools }}</strong></article>
+  <article class="stat-card"><span>Palpites</span><strong class="format-number">{{ stats.total_bets }}</strong></article>
+  <article class="stat-card"><span>Pontos</span><strong class="format-number">{{ stats.total_points }}</strong></article>
 </section>
 <canvas id="pointsChart" class="chart" width="900" height="320" data-values="[{{ stats.total_pools }},{{ stats.total_bets }},{{ stats.total_points }}]"></canvas>
+<script>
+  document.querySelectorAll('.format-number').forEach(el => {
+    const val = parseInt(el.textContent.trim(), 10);
+    if (!isNaN(val)) {
+      el.textContent = val.toLocaleString('pt-BR');
+    }
+  });
+</script>
 {% endblock %}
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/charts.js') }}"></script>

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Alertas do Sistema - {{ brand_name }}{% endblock %}
+{% block content %}
+<section class="content-head">
+  <h1>Alertas do Sistema</h1>
+  <p>Monitore todas as notificações e eventos gerados pelo sistema.</p>
+</section>
+
+<section class="table-section" style="margin-top: 2rem;">
+  <table style="width: 100%; border-collapse: collapse; text-align: left;">
+    <thead>
+      <tr style="border-bottom: 2px solid var(--border-color);">
+        <th style="padding: 1rem;">Data</th>
+        <th style="padding: 1rem;">Usuário</th>
+        <th style="padding: 1rem;">Tipo</th>
+        <th style="padding: 1rem;">Título</th>
+        <th style="padding: 1rem;">Mensagem</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for alert in alerts %}
+      <tr style="border-bottom: 1px solid var(--border-color);">
+        <td style="padding: 1rem; white-space: nowrap;">{{ alert.created_at }}</td>
+        <td style="padding: 1rem;">{{ alert.user_name or 'Sistema' }}</td>
+        <td style="padding: 1rem;">
+          <span style="background: var(--bg-card); padding: 0.2rem 0.5rem; border-radius: 4px; border: 1px solid var(--border-color); font-size: 0.85rem;">
+            {{ alert.type }}
+          </span>
+        </td>
+        <td style="padding: 1rem;"><strong>{{ alert.title }}</strong></td>
+        <td style="padding: 1rem; color: var(--text-color-muted);">{{ alert.body }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" style="padding: 2rem; text-align: center; color: var(--text-color-muted);">Nenhum alerta registrado no sistema ainda.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

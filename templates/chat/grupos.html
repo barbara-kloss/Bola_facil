@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Chat em Grupo - {{ brand_name }}{% endblock %}
+{% block content %}
+<section class="content-head">
+  <h1>Grupos de Chat</h1>
+  <p>Converse com seus amigos.</p>
+</section>
+
+<section style="margin-top: 2rem;">
+  <form id="create-group-form" style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+    <input type="text" id="group-name" placeholder="Nome do novo grupo" required style="padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-color); color: var(--text-color);">
+    <button type="submit" class="button-primary">Criar Grupo</button>
+  </form>
+
+  <div class="groups-list" style="display: grid; gap: 1rem;">
+    {% for group in groups %}
+      <a href="{{ url_for('chat.group_chat', group_id=group.id) }}" class="card" style="text-decoration: none; color: inherit;">
+        <h2>{{ group.name }}</h2>
+        <p style="opacity: 0.7; font-size: 0.875rem;">Criado em {{ group.created_at }}</p>
+      </a>
+    {% else %}
+      <div class="empty-state">Você ainda não participa de nenhum grupo.</div>
+    {% endfor %}
+  </div>
+</section>
+
+<script>
+document.getElementById('create-group-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const name = document.getElementById('group-name').value.trim();
+  if(!name) return;
+  
+  try {
+    const res = await fetch("{{ url_for('chat.create_group') }}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+    if(res.ok) {
+      window.location.reload();
+    } else {
+      Toast.error("Erro ao criar grupo.");
+    }
+  } catch (err) {
+    console.error(err);
+    Toast.error("Erro na conexão.");
+  }
+});
+</script>
+{% endblock %}

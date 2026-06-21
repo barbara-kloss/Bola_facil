@@ -9,18 +9,26 @@ def _db():
 
 
 class User(UserMixin):
-    def __init__(self, id, name, email, whatsapp_phone=None, password_hash=None, created_at=None):
+    def __init__(self, id, name, email, whatsapp_phone=None, password_hash=None, created_at=None, role="user", notifications_enabled=1):
         self.id = str(id)
         self.name = name
         self.email = email
         self.whatsapp_phone = whatsapp_phone
         self.password_hash = password_hash
         self.created_at = created_at
+        self.role = role
+        self.notifications_enabled = notifications_enabled
+
+    @property
+    def is_admin(self):
+        return self.role == "admin"
 
     @classmethod
     def from_row(cls, row):
         if row is None:
             return None
+        
+        # Use get() for role and notifications_enabled in case they are missing from older rows before migration
         return cls(
             id=row["id"],
             name=row["name"],
@@ -28,20 +36,33 @@ class User(UserMixin):
             whatsapp_phone=row["whatsapp_phone"],
             password_hash=row["password_hash"],
             created_at=row["created_at"],
+            role=row["role"] if "role" in row.keys() else "user",
+            notifications_enabled=row["notifications_enabled"] if "notifications_enabled" in row.keys() else 1,
         )
 
     @staticmethod
     def create(name, email, password, whatsapp_phone=None):
+        count = _db().execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        role = "admin" if count == 0 else "user"
+        
         password_hash = generate_password_hash(password)
         cursor = _db().execute(
             """
-            INSERT INTO users (name, email, whatsapp_phone, password_hash)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO users (name, email, whatsapp_phone, password_hash, role)
+            VALUES (?, ?, ?, ?, ?)
             """,
-            (name, email.lower(), whatsapp_phone, password_hash),
+            (name, email.lower(), whatsapp_phone, password_hash, role),
         )
         _db().commit()
         return User.get_by_id(cursor.lastrowid)
+
+    @staticmethod
+    def set_notification_preference(user_id, enabled):
+        _db().execute(
+            "UPDATE users SET notifications_enabled = ? WHERE id = ?",
+            (1 if enabled else 0, user_id),
+        )
+        _db().commit()
 
     @staticmethod
     def get_by_id(user_id):

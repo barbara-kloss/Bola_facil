@@ -19,7 +19,7 @@
       
       <div class="form-group">
         <label for="whatsapp_phone">WhatsApp</label>
-        <input id="whatsapp_phone" name="whatsapp_phone" type="tel" autocomplete="tel" placeholder="(11) 98765-4321">
+        <input id="whatsapp_phone" name="whatsapp_phone" type="tel" autocomplete="tel" placeholder="(11) 98765-4321" maxlength="15">
       </div>
       
       <div class="form-group">
@@ -35,7 +35,18 @@
 </section>
 
 <script>
+document.getElementById('whatsapp_phone').addEventListener('input', function(e) {
+  let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,5})(\d{0,4})/);
+  e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? '-' + x[3] : '');
+});
+
+// Remove mask on submit so backend gets clean numbers (optional, but good practice, though existing backend might strip it)
 document.getElementById('register-form').addEventListener('submit', function(e) {
+  const phone = document.getElementById('whatsapp_phone');
+  if (phone) {
+    phone.value = phone.value.replace(/\D/g, '');
+  }
+  
   const btn = this.querySelector('button[type="submit"]');
   const original = btn.textContent;
   btn.disabled = true;

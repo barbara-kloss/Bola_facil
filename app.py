@@ -11,8 +11,12 @@ from controllers.bet_controller import bet_bp
 from controllers.game_controller import game_bp
 from controllers.ranking_controller import ranking_bp
 from controllers.whatsapp_controller import whatsapp_bp
+from controllers.admin_controller import admin_bp
+from controllers.chat_controller import chat_bp
+from controllers.notification_controller import notification_bp
 from models.user import User
 from services.football_service import FootballService
+from utils.decorators import admin_required
 
 
 login_manager = LoginManager()
@@ -55,6 +59,20 @@ def init_database(app):
 
 
 def ensure_schema_updates(connection):
+    # --- users table columns ---
+    user_columns = {
+        row["name"]
+        for row in connection.execute("PRAGMA table_info(users)").fetchall()
+    }
+    user_additions = {
+        "role": "ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'",
+        "notifications_enabled": "ALTER TABLE users ADD COLUMN notifications_enabled INTEGER NOT NULL DEFAULT 1",
+    }
+    for column, statement in user_additions.items():
+        if column not in user_columns:
+            connection.execute(statement)
+
+    # --- games table columns ---
     columns = {
         row["name"]
         for row in connection.execute("PRAGMA table_info(games)").fetchall()
@@ -73,12 +91,58 @@ def ensure_schema_updates(connection):
         if column not in columns:
             connection.execute(statement)
 
+    # --- indexes ---
     indexes = [
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_games_external_match_id ON games(external_match_id)",
         "CREATE INDEX IF NOT EXISTS idx_games_competition_code ON games(competition_code)",
     ]
     for statement in indexes:
         connection.execute(statement)
+
+    # --- new tables (chat + notifications) ---
+    connection.executescript("""
+        CREATE TABLE IF NOT EXISTS chat_groups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            created_by INTEGER NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+        );
+        CREATE TABLE IF NOT EXISTS chat_group_members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (group_id) REFERENCES chat_groups(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            UNIQUE (group_id, user_id)
+        );
+        CREATE TABLE IF NOT EXISTS chat_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id INTEGER,
+            sender_id INTEGER NOT NULL DEFAULT 0,
+            recipient_id INTEGER,
+            text TEXT NOT NULL,
+            is_bot INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (group_id) REFERENCES chat_groups(id) ON DELETE CASCADE
+        );
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            body TEXT,
+            read INTEGER NOT NULL DEFAULT 0,
+            extra_data TEXT,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+        CREATE INDEX IF NOT EXISTS idx_chat_messages_group ON chat_messages(group_id);
+        CREATE INDEX IF NOT EXISTS idx_chat_messages_recipient ON chat_messages(recipient_id);
+    """)
+
     connection.commit()
 
 
@@ -95,6 +159,9 @@ def create_app(config_object=None):
     app.register_blueprint(bet_bp)
     app.register_blueprint(ranking_bp)
     app.register_blueprint(whatsapp_bp)
+    app.register_blueprint(admin_bp)
+    app.register_blueprint(chat_bp)
+    app.register_blueprint(notification_bp)
 
     @app.teardown_appcontext
     def close_db(error=None):
@@ -127,7 +194,7 @@ def create_app(config_object=None):
         return render_template("stats/dashboard.html", stats=stats)
 
     @app.route("/admin/sync-games", methods=["GET", "POST"])
-    @login_required
+    @admin_required
     def sync_games():
         try:
             synced_games = FootballService.sync_matches_to_db()
