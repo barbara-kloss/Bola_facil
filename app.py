@@ -4,6 +4,7 @@ from pathlib import Path
 
 from flask import Flask, flash, g, jsonify, redirect, render_template, request, url_for
 from flask_login import LoginManager, current_user, login_required
+from flask_socketio import SocketIO
 
 from config import DevelopmentConfig
 from controllers.auth_controller import auth_bp
@@ -14,10 +15,15 @@ from controllers.whatsapp_controller import whatsapp_bp
 from controllers.admin_controller import admin_bp
 from controllers.chat_controller import chat_bp
 from controllers.notification_controller import notification_bp
+from controllers.pool_controller import pool_bp
 from models.user import User
 from services.football_service import FootballService
 from utils.decorators import admin_required
 from utils.csrf import generate_csrf_token, validate_csrf_token
+
+
+# SocketIO global instance (configured in create_app)
+socketio = SocketIO()
 
 
 login_manager = LoginManager()
@@ -163,6 +169,14 @@ def create_app(config_object=None):
     app.register_blueprint(admin_bp)
     app.register_blueprint(chat_bp)
     app.register_blueprint(notification_bp)
+    app.register_blueprint(pool_bp)
+
+    # Initialize SocketIO with the app
+    socketio.init_app(app, cors_allowed_origins="*", async_mode="threading")
+
+    # Register SocketIO event handlers
+    from controllers.socket_controller import register_socket_handlers
+    register_socket_handlers(socketio)
 
     @app.teardown_appcontext
     def close_db(error=None):
@@ -255,4 +269,5 @@ def load_user(user_id):
 
 
 if __name__ == "__main__":
-    create_app().run(debug=os.environ.get("FLASK_DEBUG", "1") == "1")
+    app = create_app()
+    socketio.run(app, debug=os.environ.get("FLASK_DEBUG", "1") == "1", allow_unsafe_werkzeug=True)
