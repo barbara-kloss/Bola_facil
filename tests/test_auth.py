@@ -79,3 +79,39 @@ def test_first_user_is_admin(app, client):
         normal = User.get_by_email("normal@example.com")
         assert admin.is_admin is True
         assert normal.is_admin is False
+
+def test_forgot_password_flow(app, client):
+    # Register user
+    client.post(
+        "/register",
+        json={"name": "Forgot User", "email": "forgot@example.com", "password": "senha123"},
+    )
+    client.post("/logout")
+    
+    # Request reset
+    resp1 = client.post("/esqueci-senha", json={"email": "forgot@example.com"})
+    assert resp1.status_code == 200
+    
+    with app.app_context():
+        from models.user import User
+        user = User.get_by_email("forgot@example.com")
+        token = user.reset_token
+        assert token is not None
+        assert user.reset_token_expires_at is not None
+
+    # Reset password
+    resp2 = client.post(
+        f"/resetar-senha/{token}",
+        json={"password": "newpassword123", "password_confirm": "newpassword123"}
+    )
+    assert resp2.status_code == 200
+    
+    with app.app_context():
+        from models.user import User
+        user = User.get_by_email("forgot@example.com")
+        assert user.reset_token is None
+        assert user.check_password("newpassword123") is True
+
+    # Login with new password
+    resp3 = client.post("/login", json={"email": "forgot@example.com", "password": "newpassword123"})
+    assert resp3.status_code == 200

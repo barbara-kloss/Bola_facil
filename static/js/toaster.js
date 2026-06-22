@@ -93,7 +93,7 @@ class ApiRequest {
       const result = await response.json();
 
       if (!response.ok) {
-        const message = errorMessage || result.message || 'Ocorreu um erro. Tente novamente.';
+        const message = errorMessage || result.error || result.message || 'Ops, algo deu errado. Tente novamente.';
         Toast.error(message);
         throw new Error(message);
       }

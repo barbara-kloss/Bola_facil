@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/toaster.css') }}">
   <meta name="csrf-token" content="{{ csrf_token() }}">
+  <link rel="icon" href="{{ url_for('static', filename='img/ball.png') }}" type="image/png">
   {% block styles %}{% endblock %}
 </head>
 <body>
@@ -37,9 +38,9 @@
           </a>
         {% endif %}
         <a href="{{ url_for('auth.profile') }}">Perfil</a>
-        <form method="post" action="{{ url_for('auth.logout') }}" style="display: inline; margin: 0;">
+        <form method="post" action="{{ url_for('auth.logout') }}" style="display: inline; margin: 0;" id="logout-form">
           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-          <button type="submit" class="nav-logout-btn">Sair</button>
+          <button type="button" class="nav-logout-btn" onclick="showConfirmModal('Tem certeza que deseja sair?', () => document.getElementById('logout-form').submit())">Sair</button>
         </form>
       </nav>
     {% endif %}
@@ -64,8 +65,39 @@
   </main>
 
   <footer class="footer">{{ brand_slogan }}</footer>
+
+  <!-- Confirm Modal -->
+  <div class="modal-overlay" id="confirm-modal">
+    <div class="custom-modal">
+      <div class="modal-header">
+        <h3 id="confirm-modal-title">Confirmação</h3>
+        <button class="modal-close-btn" onclick="hideConfirmModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="confirm-modal-body">
+        Você tem certeza?
+      </div>
+      <div class="modal-footer">
+        <button class="button-secondary" onclick="hideConfirmModal()">Cancelar</button>
+        <button class="button-primary" id="confirm-modal-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
   <script src="{{ url_for('static', filename='js/toaster.js') }}"></script>
   <script>
+    function showConfirmModal(message, onConfirm) {
+      document.getElementById('confirm-modal-body').textContent = message;
+      const okBtn = document.getElementById('confirm-modal-ok');
+      okBtn.onclick = function() {
+        hideConfirmModal();
+        if (onConfirm) onConfirm();
+      };
+      document.getElementById('confirm-modal').classList.add('active');
+    }
+    function hideConfirmModal() {
+      document.getElementById('confirm-modal').classList.remove('active');
+    }
+
     // Monkey-patch fetch para adicionar o token CSRF
     const originalFetch = window.fetch;
     window.fetch = function() {

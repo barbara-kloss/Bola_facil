@@ -24,8 +24,8 @@
       </div>
       
       <div class="form-group">
-        <label for="password">Senha (mín. 6 caracteres)</label>
-        <input id="password" name="password" type="password" autocomplete="new-password" minlength="6" required>
+        <label for="password">Senha (mín. 8 caracteres, letras e números)</label>
+        <input id="password" name="password" type="password" autocomplete="new-password" minlength="8" pattern="(?=.*\d)(?=.*[a-zA-Z]).{8,}" title="Deve conter no mínimo 8 caracteres, com pelo menos uma letra e um número." required>
       </div>
       
       <button type="submit" class="button-primary">Cadastrar</button>
@@ -45,7 +45,13 @@ document.getElementById('whatsapp_phone').addEventListener('input', function(e) 
 document.getElementById('register-form').addEventListener('submit', function(e) {
   const phone = document.getElementById('whatsapp_phone');
   if (phone) {
-    phone.value = phone.value.replace(/\D/g, '');
+    const raw = phone.value.replace(/\D/g, '');
+    if (raw.length > 0 && (raw.length < 10 || raw.length > 15)) {
+      e.preventDefault();
+      Toast.error("WhatsApp inválido. Insira o DDD + número.");
+      return;
+    }
+    phone.value = raw;
   }
   
   const btn = this.querySelector('button[type="submit"]');

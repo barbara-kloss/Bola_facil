@@ -58,3 +58,22 @@ class EmailService:
         </html>
         """
         return EmailService.send_email(to_email, subject, html)
+
+    @staticmethod
+    def send_password_reset_email(to_email, user_name, reset_url):
+        subject = "Redefinição de Senha - BolãoFácil"
+        html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+            <h2>Olá, {user_name}!</h2>
+            <p>Recebemos uma solicitação para redefinir a senha da sua conta no BolãoFácil.</p>
+            <p>Se foi você quem fez a solicitação, clique no link abaixo para criar uma nova senha:</p>
+            <a href="{reset_url}" style="display: inline-block; padding: 10px 20px; background-color: #00A651; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">Redefinir Senha</a>
+            <p>O link é válido por 1 hora.</p>
+            <p>Se você não solicitou a redefinição de senha, apenas ignore este e-mail.</p>
+            <hr style="border: 0; border-top: 1px solid #ccc; margin-top: 20px;">
+            <p style="font-size: 0.8em; color: #777;">Equipe BolãoFácil</p>
+        </body>
+        </html>
+        """
+        return EmailService.send_email(to_email, subject, html)

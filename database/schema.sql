@@ -6,6 +6,11 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT NOT NULL UNIQUE,
     whatsapp_phone TEXT,
     password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'user',
+    notifications_enabled INTEGER NOT NULL DEFAULT 1,
+    notification_prefs TEXT,
+    reset_token TEXT,
+    reset_token_expires_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -7,7 +7,18 @@ def is_valid_email(email):
 
 
 def is_valid_password(password):
-    return bool(password and len(password) >= 6)
+    if not password or len(password) < 8:
+        return False
+    has_letter = bool(re.search(r"[a-zA-Z]", password))
+    has_number = bool(re.search(r"\d", password))
+    return has_letter and has_number
+
+
+def is_valid_phone(phone):
+    if not phone:
+        return True # Optional field
+    digits = re.sub(r"\D", "", phone)
+    return 10 <= len(digits) <= 15
 
 
 def format_phone(phone):

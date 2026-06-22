@@ -2,6 +2,10 @@
 {% block title %}Chat em Grupo - {{ brand_name }}{% endblock %}
 {% block content %}
 <section class="content-head">
+  <a href="javascript:history.back()" class="back-link">
+    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/></svg>
+    Voltar
+  </a>
   <h1>Grupos de Chat</h1>
   <p>Converse com seus amigos.</p>
 </section>
@@ -14,8 +18,10 @@
 
   <div class="groups-list" style="display: grid; gap: 1rem;">
     {% for group in groups %}
-      <a href="{{ url_for('chat.group_chat', group_id=group.id) }}" class="card" style="text-decoration: none; color: inherit;">
-        <h2>{{ group.name }}</h2>
+      <a href="{{ url_for('chat.group_chat', group_id=group.id) }}" class="card" style="text-decoration: none; color: inherit; background: var(--white); border: 1px solid var(--blue-light); border-radius: 8px; padding: 1.5rem; display: block; transition: transform 0.2s, background 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <h2 style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; color: var(--blue-dark); font-weight: 800;">
+          <span style="color: var(--gray-dark); font-weight: 600;">#</span>{{ group.name }}
+        </h2>
         <p style="opacity: 0.7; font-size: 0.875rem;">Criado em {{ group.created_at }}</p>
       </a>
     {% else %}

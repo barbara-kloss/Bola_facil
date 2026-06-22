@@ -31,15 +31,22 @@
             {% endif %}
           </div>
           <div class="match-opponents">
-            <span class="team-name">
-              {% if game.home_crest %}<img src="{{ game.home_crest }}" alt="">{% endif %}
-              {{ game.home_team }}
+            <div class="match-opponents-teams">
+              <span class="team-name">
+                {% if game.home_crest %}<img src="{{ game.home_crest }}" alt="">{% endif %}
+                {{ game.home_team }}
+              </span>
+              <strong>vs.</strong>
+              <span class="team-name">
+                {% if game.away_crest %}<img src="{{ game.away_crest }}" alt="">{% endif %}
+                {{ game.away_team }}
+              </span>
+            </div>
+            {% if game.competition_name or game.matchday %}
+            <span class="match-meta">
+              {% if game.competition_name %}{{ game.competition_name }}{% endif %}{% if game.matchday %} &bull; Rodada {{ game.matchday }}{% endif %}
             </span>
-            <strong>vs.</strong>
-            <span class="team-name">
-              {% if game.away_crest %}<img src="{{ game.away_crest }}" alt="">{% endif %}
-              {{ game.away_team }}
-            </span>
+            {% endif %}
           </div>
           <div class="match-score">
             {% if game.home_score is not none and game.away_score is not none %}

@@ -54,14 +54,14 @@ class ApiMessages:
     VALIDATION_INVALID_SCORE = "Placar inválido."
 
     # Erros genéricos
-    ERROR_GENERIC = "Ocorreu um erro. Tente novamente."
-    ERROR_NETWORK = "Erro de conexão. Verifique sua internet e tente novamente."
-    ERROR_TIMEOUT = "A solicitação demorou muito. Tente novamente."
-    ERROR_UNAUTHORIZED = "Você não tem permissão para realizar esta ação."
-    ERROR_FORBIDDEN = "Acesso negado."
-    ERROR_NOT_FOUND = "Recurso não encontrado."
-    ERROR_CONFLICT = "Conflito ao processar a solicitação."
-    ERROR_VALIDATION = "Dados inválidos. Verifique e tente novamente."
+    ERROR_GENERIC = "Ops, algo deu errado! Por favor, tente novamente."
+    ERROR_NETWORK = "Sem conexão com a internet. Verifique sua rede e tente de novo."
+    ERROR_TIMEOUT = "O servidor demorou muito para responder. Tente novamente."
+    ERROR_UNAUTHORIZED = "Você precisa estar logado ou não tem permissão para isso."
+    ERROR_FORBIDDEN = "Acesso negado a este recurso."
+    ERROR_NOT_FOUND = "Não conseguimos encontrar o que você procura."
+    ERROR_CONFLICT = "Houve um conflito ao tentar salvar essas informações."
+    ERROR_VALIDATION = "Alguns dados informados são inválidos. Verifique e tente de novo."
 
     # Sucesso genérico
     SUCCESS_GENERIC = "Operação realizada com sucesso!"

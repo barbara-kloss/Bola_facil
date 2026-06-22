@@ -2,46 +2,49 @@
 {% block title %}Meu Perfil - {{ brand_name }}{% endblock %}
 {% block content %}
 <section class="content-head">
+  <a href="javascript:history.back()" class="back-link">
+    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/></svg>
+    Voltar
+  </a>
   <h1>Meu Perfil</h1>
 </section>
 
 <section style="margin-top: 2rem;">
-  <form method="post" action="{{ url_for('auth.update_profile') }}" class="form" style="max-width: 400px;">
+  <form method="post" action="{{ url_for('auth.update_profile') }}" class="form side-form" style="max-width: 800px; width: 100%;">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    
     <h2>Meus Dados</h2>
-    <div class="form-group">
-      <label for="name">Nome</label>
-      <input id="name" name="name" type="text" value="{{ current_user.name }}"
-        style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-color); color: var(--text-color);"
-        required>
-    </div>
-    <div class="form-group">
-      <label for="email">E-mail</label>
-      <input id="email" name="email" type="email" value="{{ current_user.email }}"
-        style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-color); color: var(--text-color);"
-        required>
-    </div>
-    <div class="form-group">
-      <label for="whatsapp_phone">WhatsApp</label>
-      <input id="whatsapp_phone" name="whatsapp_phone" type="tel" autocomplete="tel" placeholder="(11) 98765-4321"
-        maxlength="15" value="{{ current_user.whatsapp_phone or '' }}"
-        style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-color); color: var(--text-color);">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+      <div class="form-group">
+        <label for="name">Nome</label>
+        <input id="name" name="name" type="text" value="{{ current_user.name }}" required>
+      </div>
+      <div class="form-group">
+        <label for="email">E-mail</label>
+        <input id="email" name="email" type="email" value="{{ current_user.email }}" required>
+      </div>
+      <div class="form-group">
+        <label for="whatsapp_phone">WhatsApp</label>
+        <input id="whatsapp_phone" name="whatsapp_phone" type="tel" autocomplete="tel" placeholder="(11) 98765-4321" maxlength="15" value="{{ current_user.whatsapp_phone or '' }}">
+      </div>
     </div>
 
-    {% if not current_user.is_admin %}
-    <h2 style="margin-top: 2rem;">Preferências de Notificação</h2>
-
-    <div class="form-group" style="flex-direction: row; align-items: center; gap: 1rem;">
-      <input type="checkbox" id="notifications_enabled" name="enabled" value="1" {{ 'checked' if
-        current_user.notifications_enabled else '' }}>
-      <label for="notifications_enabled" style="margin-bottom: 0;">Receber notificações do sistema</label>
+    <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color, #e5e7eb);">
+      {% if not current_user.is_admin %}
+      <h2>Preferências de Notificação</h2>
+      <div class="form-group" style="flex-direction: row; align-items: center; gap: 1rem;">
+        <input type="checkbox" id="notifications_enabled" name="enabled" value="1" {{ 'checked' if current_user.notifications_enabled else '' }} style="width: auto;">
+        <label for="notifications_enabled" style="margin-bottom: 0;">Receber notificações do sistema</label>
+      </div>
+      {% else %}
+      <h2>Notificações</h2>
+      <p>Como administrador, você sempre receberá as notificações importantes do sistema.</p>
+      {% endif %}
     </div>
-    {% else %}
-    <h2 style="margin-top: 2rem;">Notificações</h2>
-    <p>Como administrador, você sempre receberá as notificações importantes do sistema.</p>
-    {% endif %}
 
-    <button type="submit" class="button-primary" style="margin-top: 1rem;">Salvar Alterações</button>
+    <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
+      <button type="submit" class="button-primary">Salvar Alterações</button>
+    </div>
   </form>
 </section>
 <script>
@@ -56,7 +59,13 @@
 
     document.querySelector('form').addEventListener('submit', function (e) {
       if (phoneInput.value) {
-        phoneInput.value = phoneInput.value.replace(/\D/g, '');
+        const raw = phoneInput.value.replace(/\D/g, '');
+        if (raw.length > 0 && (raw.length < 10 || raw.length > 15)) {
+          e.preventDefault();
+          Toast.error("WhatsApp inválido. Insira o DDD + número (mín. 10 dígitos).");
+          return;
+        }
+        phoneInput.value = raw;
       }
     });
   }

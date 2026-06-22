@@ -74,6 +74,9 @@ def ensure_schema_updates(connection):
     user_additions = {
         "role": "ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'",
         "notifications_enabled": "ALTER TABLE users ADD COLUMN notifications_enabled INTEGER NOT NULL DEFAULT 1",
+        "notification_prefs": "ALTER TABLE users ADD COLUMN notification_prefs TEXT",
+        "reset_token": "ALTER TABLE users ADD COLUMN reset_token TEXT",
+        "reset_token_expires_at": "ALTER TABLE users ADD COLUMN reset_token_expires_at TEXT",
     }
     for column, statement in user_additions.items():
         if column not in user_columns:

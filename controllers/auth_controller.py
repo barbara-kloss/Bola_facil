@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 
 from models.user import Pool, User
-from utils.helpers import is_valid_email, is_valid_password
+from utils.helpers import is_valid_email, is_valid_password, is_valid_phone
 from utils.messages import ApiMessages
 from utils.responses import respond
 from utils import rate_limit
@@ -40,7 +40,7 @@ def login():
                 ApiMessages.AUTH_LOGIN_ERROR,
                 ok=False, status=401,
                 template_fn=render_template,
-                template_kwargs={"template_name_or_list": "auth/login.html"},
+                template_kwargs={"template_name_or_list": "auth/login.html", "email": email},
             )
 
         rate_limit.record_success()
@@ -74,13 +74,14 @@ def register():
         password = data.get("password", "")
         whatsapp_phone = data.get("whatsapp_phone", "").strip() or None
 
-        if not name or not is_valid_email(email) or not is_valid_password(password):
-            return respond(
-                ApiMessages.VALIDATION_REQUIRED_FIELD,
-                ok=False, status=400,
-                template_fn=render_template,
-                template_kwargs={"template_name_or_list": "auth/register.html"},
-            )
+        if not name:
+            return respond("O nome é obrigatório.", ok=False, status=400, template_fn=render_template, template_kwargs={"template_name_or_list": "auth/register.html"})
+        if not is_valid_email(email):
+            return respond("E-mail inválido.", ok=False, status=400, template_fn=render_template, template_kwargs={"template_name_or_list": "auth/register.html"})
+        if not is_valid_password(password):
+            return respond("A senha deve ter no mínimo 8 caracteres, contendo pelo menos uma letra e um número.", ok=False, status=400, template_fn=render_template, template_kwargs={"template_name_or_list": "auth/register.html"})
+        if whatsapp_phone and not is_valid_phone(whatsapp_phone):
+            return respond("WhatsApp/Telefone inválido. Deve conter apenas números (DDD + 8 ou 9 dígitos).", ok=False, status=400, template_fn=render_template, template_kwargs={"template_name_or_list": "auth/register.html"})
 
         existing_user = User.get_by_email(email)
         if existing_user:
@@ -137,6 +138,15 @@ def update_profile():
     name = data.get("name", current_user.name).strip()
     email = data.get("email", current_user.email).strip()
 
+    if not name:
+        return respond("O nome é obrigatório.", ok=False, status=400, redirect_to="auth.profile")
+    if not is_valid_email(email):
+        return respond("E-mail inválido.", ok=False, status=400, redirect_to="auth.profile")
+
+    whatsapp_phone = data.get("whatsapp_phone", "").strip() or None
+    if whatsapp_phone and not is_valid_phone(whatsapp_phone):
+        return respond("WhatsApp/Telefone inválido. Deve conter apenas números (DDD + 8 ou 9 dígitos).", ok=False, status=400, redirect_to="auth.profile")
+
     if email != current_user.email:
         existing_user = User.get_by_email(email)
         if existing_user:
@@ -173,3 +183,59 @@ def logout():
         ApiMessages.AUTH_LOGOUT_SUCCESS,
         ok=True, redirect_to="auth.login",
     )
+
+
+@auth_bp.route("/esqueci-senha", methods=["GET", "POST"])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for("games.list_games"))
+
+    if request.method == "POST":
+        data = request.get_json(silent=True) or request.form
+        email = data.get("email", "").strip()
+        
+        user = User.get_by_email(email)
+        if user:
+            token = User.generate_reset_token(user.id)
+            reset_url = request.host_url.rstrip("/") + url_for("auth.reset_password", token=token)
+            
+            from services.email_service import EmailService
+            EmailService.send_password_reset_email(user.email, user.name, reset_url)
+            
+        # Sempre retorna sucesso para não expor quais emails existem na base
+        return respond(
+            "Se o e-mail estiver cadastrado, você receberá um link para redefinir sua senha.",
+            ok=True, redirect_to="auth.login"
+        )
+
+    return render_template("auth/forgot_password.html")
+
+
+@auth_bp.route("/resetar-senha/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for("games.list_games"))
+
+    user = User.get_by_reset_token(token)
+    if not user:
+        flash("O link de redefinição é inválido ou expirou.", "error")
+        return redirect(url_for("auth.login"))
+
+    if request.method == "POST":
+        data = request.get_json(silent=True) or request.form
+        password = data.get("password")
+        password_confirm = data.get("password_confirm")
+
+        if not password or len(password) < 6:
+            return respond("A senha deve ter pelo menos 6 caracteres.", ok=False, status=400)
+            
+        if password != password_confirm:
+            return respond("As senhas não coincidem.", ok=False, status=400)
+
+        User.reset_password(user.id, password)
+        return respond(
+            "Sua senha foi redefinida com sucesso. Você já pode fazer login.",
+            ok=True, redirect_to="auth.login"
+        )
+
+    return render_template("auth/reset_password.html", token=token)

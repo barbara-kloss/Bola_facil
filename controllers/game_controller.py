@@ -51,6 +51,26 @@ def list_games():
     # Obter todos os jogos
     all_games = Game.list(pool["id"]) if pool else []
 
+    # Deduplicar: quando dois jogos têm os mesmos times + mesmo datetime,
+    # manter o que veio da API (tem external_match_id). Jogos manuais duplicados
+    # são silenciosamente ignorados na exibição (não excluídos do banco).
+    seen = {}
+    deduplicated = []
+    for game in all_games:
+        key = (game["home_team"].strip().lower(), game["away_team"].strip().lower(), str(game["match_datetime"])[:16])
+        if key not in seen:
+            seen[key] = game
+            deduplicated.append(game)
+        else:
+            # Substituir pelo vindo da API se o atual não tem external_match_id
+            existing = seen[key]
+            if not existing["external_match_id"] and game["external_match_id"]:
+                # Trocar: remover o antigo e inserir o novo
+                deduplicated = [g for g in deduplicated if g["id"] != existing["id"]]
+                seen[key] = game
+                deduplicated.append(game)
+    all_games = deduplicated
+
     # Calcular paginação
     total_items = len(all_games)
     total_pages = (total_items + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE

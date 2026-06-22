@@ -9,7 +9,7 @@ def _db():
 
 
 class User(UserMixin):
-    def __init__(self, id, name, email, whatsapp_phone=None, password_hash=None, created_at=None, role="user", notifications_enabled=1):
+    def __init__(self, id, name, email, whatsapp_phone=None, password_hash=None, created_at=None, role="user", notifications_enabled=1, notification_prefs=None, reset_token=None, reset_token_expires_at=None):
         self.id = str(id)
         self.name = name
         self.email = email
@@ -18,6 +18,16 @@ class User(UserMixin):
         self.created_at = created_at
         self.role = role
         self.notifications_enabled = notifications_enabled
+        self.reset_token = reset_token
+        self.reset_token_expires_at = reset_token_expires_at
+        import json
+        if isinstance(notification_prefs, str):
+            try:
+                self.notification_prefs = json.loads(notification_prefs)
+            except:
+                self.notification_prefs = {}
+        else:
+            self.notification_prefs = notification_prefs or {}
 
     @property
     def is_admin(self):
@@ -38,6 +48,9 @@ class User(UserMixin):
             created_at=row["created_at"],
             role=row["role"] if "role" in row.keys() else "user",
             notifications_enabled=row["notifications_enabled"] if "notifications_enabled" in row.keys() else 1,
+            notification_prefs=row["notification_prefs"] if "notification_prefs" in row.keys() else "{}",
+            reset_token=row["reset_token"] if "reset_token" in row.keys() else None,
+            reset_token_expires_at=row["reset_token_expires_at"] if "reset_token_expires_at" in row.keys() else None,
         )
 
     @staticmethod
@@ -101,6 +114,38 @@ class User(UserMixin):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    @staticmethod
+    def generate_reset_token(user_id):
+        import secrets
+        from datetime import datetime, timedelta, timezone
+        
+        token = secrets.token_urlsafe(32)
+        expires_at = (datetime.now(timezone.utc) + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
+        
+        _db().execute(
+            "UPDATE users SET reset_token = ?, reset_token_expires_at = ? WHERE id = ?",
+            (token, expires_at, user_id)
+        )
+        _db().commit()
+        return token
+
+    @staticmethod
+    def get_by_reset_token(token):
+        row = _db().execute(
+            "SELECT * FROM users WHERE reset_token = ? AND reset_token_expires_at > CURRENT_TIMESTAMP", 
+            (token,)
+        ).fetchone()
+        return User.from_row(row)
+
+    @staticmethod
+    def reset_password(user_id, new_password):
+        password_hash = generate_password_hash(new_password)
+        _db().execute(
+            "UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires_at = NULL WHERE id = ?",
+            (password_hash, user_id)
+        )
+        _db().commit()
 
 
 class Pool:
