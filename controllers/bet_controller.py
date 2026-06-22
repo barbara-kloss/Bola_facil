@@ -6,6 +6,8 @@ from models.game import Game
 from models.user import PoolMember
 from utils.messages import ApiMessages
 from utils.responses import respond
+from datetime import datetime, timedelta
+from flask import current_app
 
 
 bet_bp = Blueprint("bets", __name__, url_prefix="/bets")
@@ -24,12 +26,26 @@ def bet_game(game_id):
 
     existing_bet = Bet.get_by_user_and_game(current_user.id, game_id)
 
+    lockout_minutes = current_app.config.get("BET_LOCKOUT_MINUTES", 30)
+    try:
+        match_time = datetime.fromisoformat(game["match_datetime"].replace('Z', '+00:00'))
+        if match_time.tzinfo:
+            now = datetime.now(match_time.tzinfo)
+        else:
+            now = datetime.now()
+        
+        is_locked = (match_time - now) < timedelta(minutes=lockout_minutes)
+    except ValueError:
+        is_locked = False
+
+    is_closed = game["status"] != "scheduled" or is_locked
+
     if request.method == "POST":
         data = request.get_json(silent=True) or request.form
 
-        if game["status"] == "finished":
+        if is_closed:
             return respond(
-                ApiMessages.BET_CLOSED,
+                f"Apostas encerradas para este jogo. O prazo limite é de {lockout_minutes} minutos antes da partida.",
                 ok=False, status=400,
                 template_fn=render_template,
                 template_kwargs={"template_name_or_list": "bets/form.html",
@@ -58,4 +74,4 @@ def bet_game(game_id):
             data={"bet_id": bet["id"]},
         )
 
-    return render_template("bets/form.html", game=game, bet=existing_bet)
+    return render_template("bets/form.html", game=game, bet=existing_bet, is_closed=is_closed, lockout_minutes=lockout_minutes)

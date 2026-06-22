@@ -8,17 +8,24 @@
 
 <form method="post" class="form score-form" id="bet-form">
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  
+  {% if is_closed %}
+  <div class="alert alert-warning" style="margin-bottom: 16px;">
+    <strong>Apostas encerradas!</strong> O prazo limite de {{ lockout_minutes }} minutos antes da partida já passou ou o jogo finalizou.
+  </div>
+  {% endif %}
+
   <div class="form-group">
     <label for="predicted_home_score">{{ game.home_team }}</label>
-    <input id="predicted_home_score" name="predicted_home_score" type="number" min="0" max="20" required value="{{ bet.predicted_home_score if bet else 0 }}">
+    <input id="predicted_home_score" name="predicted_home_score" type="number" min="0" max="20" required value="{{ bet.predicted_home_score if bet else 0 }}" {% if is_closed %}disabled{% endif %}>
   </div>
   
   <div class="form-group">
     <label for="predicted_away_score">{{ game.away_team }}</label>
-    <input id="predicted_away_score" name="predicted_away_score" type="number" min="0" max="20" required value="{{ bet.predicted_away_score if bet else 0 }}">
+    <input id="predicted_away_score" name="predicted_away_score" type="number" min="0" max="20" required value="{{ bet.predicted_away_score if bet else 0 }}" {% if is_closed %}disabled{% endif %}>
   </div>
   
-  <button type="submit" class="button-primary">Salvar palpite</button>
+  <button type="submit" class="button-primary" {% if is_closed %}disabled{% endif %}>Salvar palpite</button>
 </form>
 
 <script>

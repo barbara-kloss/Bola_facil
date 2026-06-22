@@ -27,6 +27,8 @@ class Config:
     WINNER_AND_GOALS_POINTS = 5
     WINNER_ONLY_POINTS = 3
     DRAW_POINTS = 2
+    
+    BET_LOCKOUT_MINUTES = int(os.environ.get("BET_LOCKOUT_MINUTES", 30))
 
     JSON_AS_ASCII = False
 

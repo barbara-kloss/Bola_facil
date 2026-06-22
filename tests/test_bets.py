@@ -80,5 +80,5 @@ def test_block_bet_after_finished_game(client, app):
     )
 
     assert response.status_code == 400
-    assert response.get_json()["error"] == ApiMessages.BET_CLOSED
+    assert "Apostas encerradas" in response.get_json()["error"]
 
