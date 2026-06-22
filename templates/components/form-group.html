@@ -1,13 +1,36 @@
-{# Form Group Component #}
-{# Usage: {% include 'components/form-group.html' with {'label': 'Email', 'name': 'email', 'type': 'email', 'required': true, 'value': email} %} #}
+{# Form Group Component — padrão BolãoFácil #}
+{# Usage: {% include 'components/form-group.html' with context %} #}
+{# Params: label, name, type, required, value, placeholder, autocomplete, hint #}
 <div class="form-group">
-  {% if label %}<label for="{{ name }}">{{ label }}</label>{% endif %}
-  <input 
-    id="{{ name }}"
-    name="{{ name }}"
-    type="{{ type or 'text' }}"
-    {% if required %}required{% endif %}
-    {% if value %}value="{{ value }}"{% endif %}
-    {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
-    {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}>
+  {% if label %}
+    <label for="{{ name }}">{{ label }}{% if required %} <span style="color:#dc3545;" aria-hidden="true">*</span>{% endif %}</label>
+  {% endif %}
+
+  {% if type == 'textarea' %}
+    <textarea
+      id="{{ name }}"
+      name="{{ name }}"
+      {% if required %}required{% endif %}
+      {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}>{{ value or '' }}</textarea>
+  {% elif type == 'select' %}
+    <select id="{{ name }}" name="{{ name }}" {% if required %}required{% endif %}>
+      {{ caller() if caller }}
+    </select>
+  {% else %}
+    <input
+      id="{{ name }}"
+      name="{{ name }}"
+      type="{{ type or 'text' }}"
+      {% if required %}required{% endif %}
+      {% if value is defined and value is not none %}value="{{ value }}"{% endif %}
+      {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+      {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
+      {% if minlength %}minlength="{{ minlength }}"{% endif %}
+      {% if maxlength %}maxlength="{{ maxlength }}"{% endif %}
+      {% if pattern %}pattern="{{ pattern }}" title="{{ title or '' }}"{% endif %}>
+  {% endif %}
+
+  {% if hint %}
+    <small style="color: var(--gray-dark); font-size: 0.8rem;">{{ hint }}</small>
+  {% endif %}
 </div>

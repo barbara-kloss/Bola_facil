@@ -1,9 +1,13 @@
-{# Button Component #}
-{# Usage: {% include 'components/button.html' with {'text': 'Click me', 'type': 'primary', 'onclick': 'doSomething()', 'disabled': false} %} #}
-<button 
-  type="{{ button_type or 'button' }}" 
-  class="button-{{ style or 'primary' }}"
+{# Button Component — padrão BolãoFácil #}
+{# Usage: {% include 'components/button.html' with context %} #}
+{# Params: text, style ('primary'|'secondary'), button_type, onclick, disabled, full_width, id #}
+<button
+  {% if id %}id="{{ id }}"{% endif %}
+  type="{{ button_type or 'button' }}"
+  class="button-{{ style or 'primary' }}{% if full_width %} w-full{% endif %}"
   {% if onclick %}onclick="{{ onclick }}"{% endif %}
-  {% if disabled %}disabled{% endif %}>
+  {% if disabled %}disabled{% endif %}
+  style="{% if full_width %}width:100%;{% endif %}">
+  {% if icon %}<span aria-hidden="true">{{ icon }}</span>{% endif %}
   {{ text }}
 </button>
