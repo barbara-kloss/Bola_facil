@@ -4,9 +4,51 @@ def _db():
     from app import get_db
     return get_db()
 
+# Mapeamento de tipos de notificação para as chaves de preferência do usuário
+_TYPE_TO_PREF_KEY = {
+    "new_game": "new_game",
+    "result": "results",
+    "reminder": "reminders",
+    "chat_message": "chat",
+    "group_invite": "chat",
+}
+
 class Notification:
     @staticmethod
+    def _is_allowed_for_user(user_id, notification_type):
+        """Verifica se o usuário aceita esse tipo de notificação com base em suas preferências."""
+        row = _db().execute(
+            "SELECT notifications_enabled, notification_prefs FROM users WHERE id = ?",
+            (user_id,)
+        ).fetchone()
+        if not row:
+            return False
+
+        # Se notificações gerais estiverem desativadas, bloquear tudo
+        if not row["notifications_enabled"]:
+            return False
+
+        # Verificar preferências granulares
+        prefs_raw = row["notification_prefs"] or "{}"
+        try:
+            prefs = json.loads(prefs_raw)
+        except (ValueError, TypeError):
+            prefs = {}
+
+        pref_key = _TYPE_TO_PREF_KEY.get(notification_type)
+        if pref_key is None:
+            # Tipo desconhecido — permite por padrão
+            return True
+
+        # Preferência ausente → True por padrão (opt-out)
+        return prefs.get(pref_key, True)
+
+    @staticmethod
     def create(user_id, type, title, body=None, extra_data=None):
+        # Verificar preferências do destinatário antes de gravar
+        if not Notification._is_allowed_for_user(user_id, type):
+            return None
+
         data_str = json.dumps(extra_data) if extra_data else None
         cursor = _db().execute(
             "INSERT INTO notifications (user_id, type, title, body, extra_data) VALUES (?, ?, ?, ?, ?)",

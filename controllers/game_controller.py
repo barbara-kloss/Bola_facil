@@ -178,6 +178,21 @@ def record_result(game_id):
             
         game = Game.record_result(game_id, home_score, away_score)
         ScoringService.recalculate_game(game_id)
+        
+        # Notificar membros do bolão sobre o resultado
+        pool_members = _db().execute(
+            "SELECT user_id FROM pool_members WHERE pool_id = ?",
+            (game["pool_id"],),
+        ).fetchall()
+        for m in pool_members:
+            Notification.create(
+                user_id=m["user_id"],
+                type="result",
+                title="Resultado Registrado!",
+                body=f"{game['home_team']} {home_score} x {away_score} {game['away_team']} — confira sua pontuação!",
+                extra_data={"game_id": game["id"]},
+            )
+
         return respond(
             ApiMessages.GAME_RESULT_RECORDED,
             ok=True, redirect_to=url_for("games.game_detail", game_id=game_id),
