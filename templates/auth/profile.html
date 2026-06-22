@@ -9,8 +9,8 @@
   <h1>Meu Perfil</h1>
 </section>
 
-<section style="margin-top: 2rem;">
-  <form method="post" action="{{ url_for('auth.update_profile') }}" class="form side-form" style="max-width: 800px; width: 100%;">
+<section style="margin-top: 2rem; display: flex; justify-content: center;">
+  <form method="post" action="{{ url_for('auth.update_profile') }}" class="form side-form" style="max-width: 760px; width: 100%;">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     
     <h2>Meus Dados</h2>

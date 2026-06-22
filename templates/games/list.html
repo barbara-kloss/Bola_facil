@@ -9,7 +9,7 @@
   {% endif %}
 </section>
 
-<section class="games-layout">
+<section class="games-layout{% if not current_user.is_admin %} games-layout--full{% endif %}">
   <div class="table-section">
     <div class="api-match-board">
       <div class="match-table-head">
