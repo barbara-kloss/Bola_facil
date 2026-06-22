@@ -115,6 +115,8 @@ def create_game():
             ok=True, status=201, redirect_to="games.list_games",
             data={"game_id": game["id"]},
         )
+    except ValueError as e:
+        return respond(str(e), ok=False, status=400, redirect_to="games.list_games")
     except Exception:
         return respond(
             ApiMessages.GAME_CREATE_ERROR,

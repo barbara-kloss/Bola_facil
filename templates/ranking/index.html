@@ -10,18 +10,28 @@
 </section>
 <section class="ranking-wrap">
   <table class="ranking-table" data-current-user-id="{{ current_user.id }}">
-    <thead><tr><th>Posição</th><th>Jogador</th><th>Palpites</th><th>Pontos</th><th>Status</th></tr></thead>
+    <thead>
+      <tr>
+        <th>Posição</th>
+        <th>Jogador</th>
+        <th>Palpites</th>
+        <th>Pontos</th>
+        <th>Status</th>
+      </tr>
+    </thead>
     <tbody>
       {% for row in ranking %}
-        <tr data-user-id="{{ row.user_id }}">
-          <td><span class="rank-badge rank-{{ loop.index }}">{{ loop.index }}</span></td>
-          <td>{{ row.name }}</td>
-          <td>{{ row.bets_count }}</td>
-          <td>{{ row.total_points }}</td>
-          <td><span class="ranking-status status-premium">Bolão Premium</span></td>
-        </tr>
+      <tr data-user-id="{{ row.user_id }}">
+        <td><span class="rank-badge rank-{{ loop.index }}">{{ loop.index }}</span></td>
+        <td>{{ row.name }}</td>
+        <td>{{ row.bets_count }}</td>
+        <td>{{ row.total_points }}</td>
+        <td><span class="ranking-status status-premium">Bolão Premium</span></td>
+      </tr>
       {% else %}
-        <tr><td colspan="5">Ranking vazio.</td></tr>
+      <tr>
+        <td colspan="5">Ranking vazio.</td>
+      </tr>
       {% endfor %}
     </tbody>
   </table>

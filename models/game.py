@@ -7,6 +7,29 @@ def _db():
 class Game:
     @staticmethod
     def create(pool_id, home_team, away_team, match_datetime, status="scheduled", **api_fields):
+        if not home_team or not str(home_team).strip():
+            raise ValueError("O nome do time mandante não pode estar vazio")
+        if not away_team or not str(away_team).strip():
+            raise ValueError("O nome do time visitante não pode estar vazio")
+            
+        from datetime import datetime
+        try:
+            match_time = datetime.fromisoformat(match_datetime.replace('Z', '+00:00'))
+            now = datetime.now(match_time.tzinfo) if match_time.tzinfo else datetime.now()
+            if match_time <= now:
+                raise ValueError("A data e hora do jogo devem ser no futuro")
+        except ValueError as e:
+            if "futuro" in str(e):
+                raise
+            raise ValueError("Data e hora inválidas")
+
+        existing = _db().execute(
+            "SELECT id FROM games WHERE pool_id = ? AND home_team = ? AND away_team = ? AND match_datetime = ?",
+            (pool_id, home_team, away_team, match_datetime)
+        ).fetchone()
+        if existing:
+            raise ValueError("Este jogo já está cadastrado para este bolão nesta mesma data e horário")
+
         cursor = _db().execute(
             """
             INSERT INTO games (
@@ -97,7 +120,6 @@ class Game:
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(external_match_id) DO UPDATE SET
-                pool_id = excluded.pool_id,
                 competition_code = excluded.competition_code,
                 competition_name = excluded.competition_name,
                 matchday = excluded.matchday,
