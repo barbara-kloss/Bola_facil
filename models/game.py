@@ -14,7 +14,10 @@ class Game:
             
         from datetime import datetime
         try:
-            match_time = datetime.fromisoformat(match_datetime.replace('Z', '+00:00'))
+            if isinstance(match_datetime, str):
+                match_time = datetime.fromisoformat(match_datetime.replace('Z', '+00:00'))
+            else:
+                match_time = match_datetime
             now = datetime.now(match_time.tzinfo) if match_time.tzinfo else datetime.now()
             if match_time <= now:
                 raise ValueError("A data e hora do jogo devem ser no futuro")
@@ -30,7 +33,7 @@ class Game:
         if existing:
             raise ValueError("Este jogo já está cadastrado para este bolão nesta mesma data e horário")
 
-        cursor = _db().execute(
+        row = _db().execute(
             """
             INSERT INTO games (
                 pool_id, external_match_id, competition_code, competition_name, matchday,
@@ -38,6 +41,7 @@ class Game:
                 home_score, away_score, api_status, status, last_synced_at
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            RETURNING id
             """,
             (
                 pool_id,
@@ -56,9 +60,9 @@ class Game:
                 status,
                 api_fields.get("last_synced_at"),
             ),
-        )
+        ).fetchone()
         _db().commit()
-        return Game.get_by_id(cursor.lastrowid)
+        return Game.get_by_id(row["id"])
 
     @staticmethod
     def get_by_id(game_id):
@@ -66,19 +70,28 @@ class Game:
 
     @staticmethod
     def list(pool_id=None):
+        order_clause = """
+            ORDER BY 
+                CASE 
+                    WHEN status = 'live' THEN 0 
+                    WHEN status = 'scheduled' THEN 1 
+                    ELSE 2 
+                END, 
+                match_datetime ASC
+        """
         if pool_id:
             return _db().execute(
-                "SELECT * FROM games WHERE pool_id = ? ORDER BY match_datetime",
+                f"SELECT * FROM games WHERE pool_id = ? {order_clause}",
                 (pool_id,),
             ).fetchall()
-        return _db().execute("SELECT * FROM games ORDER BY match_datetime").fetchall()
+        return _db().execute(f"SELECT * FROM games {order_clause}").fetchall()
 
     @staticmethod
     def update(game_id, home_team, away_team, match_datetime, status):
         _db().execute(
             """
             UPDATE games
-               SET home_team = ?, away_team = ?, match_datetime = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+               SET home_team = ?, away_team = ?, match_datetime = ?, status = ?, updated_at = NOW()
              WHERE id = ?
             """,
             (home_team, away_team, match_datetime, status, game_id),
@@ -94,7 +107,7 @@ class Game:
         _db().execute(
             """
             UPDATE games
-               SET home_score = ?, away_score = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+               SET home_score = ?, away_score = ?, status = ?, updated_at = NOW()
              WHERE id = ?
             """,
             (int(home_score), int(away_score), status, game_id),
@@ -111,29 +124,30 @@ class Game:
 
     @staticmethod
     def upsert_external(pool_id, match_data):
-        cursor = _db().execute(
+        row = _db().execute(
             """
             INSERT INTO games (
                 pool_id, external_match_id, competition_code, competition_name, matchday,
                 home_team, away_team, home_crest, away_crest, match_datetime,
                 home_score, away_score, api_status, status, last_synced_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
             ON CONFLICT(external_match_id) DO UPDATE SET
-                competition_code = excluded.competition_code,
-                competition_name = excluded.competition_name,
-                matchday = excluded.matchday,
-                home_team = excluded.home_team,
-                away_team = excluded.away_team,
-                home_crest = excluded.home_crest,
-                away_crest = excluded.away_crest,
-                match_datetime = excluded.match_datetime,
-                home_score = excluded.home_score,
-                away_score = excluded.away_score,
-                api_status = excluded.api_status,
-                status = excluded.status,
-                last_synced_at = CURRENT_TIMESTAMP,
-                updated_at = CURRENT_TIMESTAMP
+                competition_code = EXCLUDED.competition_code,
+                competition_name = EXCLUDED.competition_name,
+                matchday = EXCLUDED.matchday,
+                home_team = EXCLUDED.home_team,
+                away_team = EXCLUDED.away_team,
+                home_crest = EXCLUDED.home_crest,
+                away_crest = EXCLUDED.away_crest,
+                match_datetime = EXCLUDED.match_datetime,
+                home_score = EXCLUDED.home_score,
+                away_score = EXCLUDED.away_score,
+                api_status = EXCLUDED.api_status,
+                status = EXCLUDED.status,
+                last_synced_at = NOW(),
+                updated_at = NOW()
+            RETURNING id
             """,
             (
                 pool_id,
@@ -151,8 +165,8 @@ class Game:
                 match_data.get("api_status"),
                 match_data["status"],
             ),
-        )
+        ).fetchone()
         _db().commit()
-        if cursor.lastrowid:
-            return Game.get_by_id(cursor.lastrowid)
+        if row:
+            return Game.get_by_id(row["id"])
         return Game.get_by_external_match_id(match_data["external_match_id"])

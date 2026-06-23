@@ -12,9 +12,10 @@ class Config:
     DATABASE_URL = os.environ.get("DATABASE_URL", "database/bolao_facil.db")
     WHATSAPP_API_URL = os.environ.get("WHATSAPP_API_URL", "")
     WHATSAPP_API_TOKEN = os.environ.get("WHATSAPP_API_TOKEN", "")
-    FOOTBALL_API_KEY = os.environ.get("FOOTBALL_API_KEY", "")
-    FOOTBALL_API_URL = os.environ.get("FOOTBALL_API_URL", "https://api.football-data.org/v4")
-    FOOTBALL_COMPETITION_CODE = "BSA"
+    API_SPORTS_KEY = os.environ.get("API_SPORTS_KEY", "")
+    API_SPORTS_URL = os.environ.get("API_SPORTS_URL", "https://v3.football.api-sports.io")
+    FOOTBALL_COMPETITION_CODE = os.environ.get("FOOTBALL_COMPETITION_CODE", "1") # League ID para World Cup na API-Sports é 1
+    API_SPORTS_SEASON = os.environ.get("API_SPORTS_SEASON", "2022")
     FOOTBALL_RATE_LIMIT_PER_MINUTE = 10
 
     SMTP_SERVER = os.environ.get("SMTP_SERVER", "")
@@ -28,7 +29,7 @@ class Config:
     WINNER_ONLY_POINTS = 3
     DRAW_POINTS = 2
     
-    BET_LOCKOUT_MINUTES = int(os.environ.get("BET_LOCKOUT_MINUTES", 30))
+    BET_LOCKOUT_MINUTES = int(os.environ.get("BET_LOCKOUT_MINUTES", 10))
 
     JSON_AS_ASCII = False
 

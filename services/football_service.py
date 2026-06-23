@@ -1,7 +1,7 @@
 import logging
 import time
-
 import requests
+import re
 from flask import current_app
 
 from models.game import Game
@@ -22,18 +22,35 @@ class FootballService:
     @staticmethod
     def get_next_matches():
         return FootballService._get(
-            f"/competitions/{current_app.config['FOOTBALL_COMPETITION_CODE']}/matches",
-            params={"status": "SCHEDULED"},
+            "/fixtures",
+            params={
+                "league": current_app.config["FOOTBALL_COMPETITION_CODE"],
+                "season": current_app.config["API_SPORTS_SEASON"]
+            },
         )
 
     @staticmethod
     def get_match_result(match_id):
-        return FootballService._get(f"/matches/{match_id}")
+        return FootballService._get(
+            "/fixtures",
+            params={"id": match_id}
+        )
 
     @staticmethod
     def get_standings():
         return FootballService._get(
-            f"/competitions/{current_app.config['FOOTBALL_COMPETITION_CODE']}/standings"
+            "/standings",
+            params={
+                "league": current_app.config["FOOTBALL_COMPETITION_CODE"],
+                "season": current_app.config["API_SPORTS_SEASON"]
+            }
+        )
+
+    @staticmethod
+    def get_match_lineups(fixture_id):
+        return FootballService._get(
+            "/fixtures/lineups",
+            params={"fixture": fixture_id}
         )
 
     @staticmethod
@@ -43,7 +60,7 @@ class FootballService:
             raise RuntimeError("Crie um bolão antes de sincronizar jogos.")
 
         payload = FootballService.get_next_matches()
-        matches = payload.get("matches", [])
+        matches = payload.get("response", [])
         synced = []
         for match in matches:
             synced.append(Game.upsert_external(pool["id"], FootballService._normalize_match(match)))
@@ -56,22 +73,25 @@ class FootballService:
             return game
 
         payload = FootballService.get_match_result(external_match_id)
-        match = payload.get("match", payload)
+        response_list = payload.get("response", [])
+        if not response_list:
+            return game
+        match = response_list[0]
         normalized = FootballService._normalize_match(match)
         return Game.upsert_external(game["pool_id"], normalized)
 
     @staticmethod
     def _get(path, params=None):
         FootballService._throttle()
-        api_url = current_app.config["FOOTBALL_API_URL"].rstrip("/")
-        api_key = current_app.config["FOOTBALL_API_KEY"]
+        api_url = current_app.config["API_SPORTS_URL"].rstrip("/")
+        api_key = current_app.config["API_SPORTS_KEY"]
         if not api_key:
-            raise RuntimeError("FOOTBALL_API_KEY não configurada.")
+            raise RuntimeError("API_SPORTS_KEY não configurada.")
 
         response = requests.get(
             f"{api_url}{path}",
             params=params,
-            headers={"X-Auth-Token": api_key},
+            headers={"x-apisports-key": api_key},
             timeout=12,
         )
         response.raise_for_status()
@@ -91,25 +111,34 @@ class FootballService:
 
     @staticmethod
     def _normalize_match(match):
-        score = match.get("score", {})
-        full_time = score.get("fullTime") or {}
-        competition = match.get("competition") or {}
-        home_team = match.get("homeTeam") or {}
-        away_team = match.get("awayTeam") or {}
-        api_status = match.get("status", "SCHEDULED")
+        fixture = match.get("fixture", {})
+        league = match.get("league", {})
+        teams = match.get("teams", {})
+        goals = match.get("goals", {})
+
+        home_team = teams.get("home", {})
+        away_team = teams.get("away", {})
+
+        round_str = league.get("round", "")
+        matchday = None
+        digits = re.findall(r'\d+', round_str)
+        if digits:
+            matchday = int(digits[0])
+
+        api_status = fixture.get("status", {}).get("short", "NS")
 
         return {
-            "external_match_id": match["id"],
-            "competition_code": competition.get("code") or current_app.config["FOOTBALL_COMPETITION_CODE"],
-            "competition_name": competition.get("name"),
-            "matchday": match.get("matchday"),
-            "home_team": home_team.get("shortName") or home_team.get("name"),
-            "away_team": away_team.get("shortName") or away_team.get("name"),
-            "home_crest": home_team.get("crest"),
-            "away_crest": away_team.get("crest"),
-            "match_datetime": match.get("utcDate"),
-            "home_score": full_time.get("home"),
-            "away_score": full_time.get("away"),
+            "external_match_id": fixture.get("id"),
+            "competition_code": str(league.get("id")) or current_app.config["FOOTBALL_COMPETITION_CODE"],
+            "competition_name": league.get("name"),
+            "matchday": matchday,
+            "home_team": home_team.get("name") or "A definir",
+            "away_team": away_team.get("name") or "A definir",
+            "home_crest": home_team.get("logo"),
+            "away_crest": away_team.get("logo"),
+            "match_datetime": fixture.get("date"),
+            "home_score": goals.get("home"),
+            "away_score": goals.get("away"),
             "api_status": api_status,
             "status": FootballService._map_status(api_status),
         }
@@ -117,10 +146,10 @@ class FootballService:
     @staticmethod
     def _map_status(api_status):
         status = (api_status or "").upper()
-        if status in {"FINISHED", "AWARDED"}:
+        if status in {"FT", "AET", "PEN"}:
             return "finished"
-        if status in {"IN_PLAY", "LIVE", "PAUSED"}:
+        if status in {"1H", "2H", "HT", "ET", "BT", "P", "LIVE"}:
             return "live"
-        if status in {"POSTPONED", "SUSPENDED", "CANCELLED"}:
+        if status in {"PST", "CANC", "ABD", "SUSP", "INT"}:
             return "cancelled"
         return "scheduled"

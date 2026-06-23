@@ -52,7 +52,7 @@ img { display: block; max-width: 100%; }
 }
 
 .brand { align-items: center; display: flex; font-weight: 800; gap: 10px; }
-.brand img { height: 40px; width: 40px; }
+.brand img { max-height: 56px; width: auto; object-fit: contain; }
 
 .nav { display: flex; flex-wrap: wrap; gap: 18px; font-weight: 600; align-items: center; }
 .nav a:hover { color: var(--yellow); }

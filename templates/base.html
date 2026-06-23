@@ -16,8 +16,7 @@
 <body>
   <header class="topbar">
     <a class="brand" href="{{ url_for('games.list_games') if current_user.is_authenticated else url_for('auth.login') }}">
-      <img src="{{ url_for('static', filename='img/image.png') }}" alt="{{ brand_name }}">
-      <span>{{ brand_name }}</span>
+      <img src="{{ url_for('static', filename='img/logo_branca.png') }}" alt="{{ brand_name }}">
     </a>
     {% if current_user.is_authenticated %}
       <nav class="nav">

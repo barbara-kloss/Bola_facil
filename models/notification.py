@@ -50,12 +50,12 @@ class Notification:
             return None
 
         data_str = json.dumps(extra_data) if extra_data else None
-        cursor = _db().execute(
-            "INSERT INTO notifications (user_id, type, title, body, extra_data) VALUES (?, ?, ?, ?, ?)",
+        row = _db().execute(
+            "INSERT INTO notifications (user_id, type, title, body, extra_data) VALUES (?, ?, ?, ?, ?) RETURNING id",
             (user_id, type, title, body, data_str)
-        )
+        ).fetchone()
         _db().commit()
-        return cursor.lastrowid
+        return row["id"] if row else None
 
     @staticmethod
     def list_for_user(user_id, unread_only=False):
@@ -65,7 +65,7 @@ class Notification:
             query += " AND read = 0"
         query += " ORDER BY created_at DESC"
         
-        return _db().execute(query, params).fetchall()
+        return _db().execute(query, tuple(params)).fetchall()
 
     @staticmethod
     def list_all(limit=100):

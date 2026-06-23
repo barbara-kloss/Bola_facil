@@ -4,6 +4,7 @@ from flask_login import current_user, login_required
 from models.game import Game
 from models.score import Score
 from models.user import Pool, PoolMember
+from services.football_service import FootballService
 from services.scoring_service import ScoringService
 from utils.helpers import format_match_time, match_status_label
 from utils.messages import ApiMessages
@@ -144,6 +145,72 @@ def create_game():
         )
 
 
+def _prepare_team_players(start_xi, is_home):
+    import re
+    processed = []
+    pos_rows = {"G": 1, "D": 2, "M": 3, "F": 4}
+    for idx, item in enumerate(start_xi):
+        player = item.get("player", {})
+        grid = player.get("grid")
+        row, col = None, None
+        if grid:
+            try:
+                parts = grid.split(":")
+                row = int(parts[0])
+                col = int(parts[1])
+            except ValueError:
+                pass
+        if row is None:
+            pos = player.get("pos", "M")
+            row = pos_rows.get(pos, 3)
+            col = idx
+        processed.append({
+            "id": player.get("id"),
+            "name": player.get("name"),
+            "number": player.get("number"),
+            "pos": player.get("pos"),
+            "row": row,
+            "col": col
+        })
+    
+    # Normaliza as linhas para uma escala 1-4
+    if processed:
+        max_orig_row = max(p["row"] for p in processed)
+        for p in processed:
+            if max_orig_row == 5:
+                if p["row"] == 5:
+                    p["row"] = 4
+                elif p["row"] == 4:
+                    p["row"] = 3
+            elif max_orig_row > 5:
+                if p["row"] >= max_orig_row:
+                    p["row"] = 4
+                elif p["row"] > 2:
+                    p["row"] = 3
+
+    rows_dict = {}
+    for p in processed:
+        rows_dict.setdefault(p["row"], []).append(p)
+        
+    row_y = {1: 3, 2: 15, 3: 27, 4: 39}
+        
+    final_players = []
+    for r, players in rows_dict.items():
+        players.sort(key=lambda x: x["col"])
+        n = len(players)
+        for i, p in enumerate(players):
+            left_pct = (i + 0.5) / n * 100
+            y_pct = row_y.get(r, 27)
+                
+            if is_home:
+                p["style"] = f"bottom: {y_pct}%; left: {left_pct}%; transform: translate(-50%, 50%);"
+            else:
+                p["style"] = f"top: {y_pct}%; left: {left_pct}%; transform: translate(-50%, -50%);"
+            final_players.append(p)
+            
+    return final_players
+
+
 @game_bp.route("/games/<int:game_id>")
 @login_required
 def game_detail(game_id):
@@ -167,11 +234,50 @@ def game_detail(game_id):
         (game_id,),
     ).fetchall()
     
+    lineups = None
+    if game["external_match_id"]:
+        try:
+            from datetime import datetime, timezone
+            match_dt = game["match_datetime"]
+            if isinstance(match_dt, str):
+                match_dt = datetime.fromisoformat(match_dt.replace('Z', '+00:00'))
+            
+            now = datetime.now(timezone.utc) if match_dt.tzinfo else datetime.now()
+            time_diff = match_dt - now
+            is_near_or_past = game["status"] in ("live", "finished") or time_diff.total_seconds() <= 24 * 3600
+            
+            if is_near_or_past:
+                payload = FootballService.get_match_lineups(game["external_match_id"])
+                raw_response = payload.get("response", [])
+                if raw_response and len(raw_response) >= 2:
+                    home_raw = raw_response[0]
+                    away_raw = raw_response[1]
+                    lineups = {
+                        "home": {
+                            "team": home_raw.get("team", {}),
+                            "formation": home_raw.get("formation"),
+                            "coach": home_raw.get("coach", {}),
+                            "players": _prepare_team_players(home_raw.get("startXI", []), is_home=True),
+                            "substitutes": [item.get("player", {}) for item in home_raw.get("substitutes", [])]
+                        },
+                        "away": {
+                            "team": away_raw.get("team", {}),
+                            "formation": away_raw.get("formation"),
+                            "coach": away_raw.get("coach", {}),
+                            "players": _prepare_team_players(away_raw.get("startXI", []), is_home=False),
+                            "substitutes": [item.get("player", {}) for item in away_raw.get("substitutes", [])]
+                        }
+                    }
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Error fetching lineups for game {game_id}: {e}")
+    
     return render_template(
         "games/detail.html",
         game=game,
         ranking=ranking,
         bets=bets,
+        lineups=lineups,
         format_match_time=format_match_time,
         match_status_label=match_status_label,
     )
@@ -244,3 +350,4 @@ def chat_messages():
             {"name": current_user.name, "text": "Pronto para palpitar!"},
         ]
     )
+
