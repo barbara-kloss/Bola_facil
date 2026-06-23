@@ -91,7 +91,7 @@ class Game:
         _db().execute(
             """
             UPDATE games
-               SET home_team = ?, away_team = ?, match_datetime = ?, status = ?, updated_at = NOW()
+               SET home_team = ?, away_team = ?, match_datetime = ?, status = ?, updated_at = CURRENT_TIMESTAMP
              WHERE id = ?
             """,
             (home_team, away_team, match_datetime, status, game_id),
@@ -107,7 +107,7 @@ class Game:
         _db().execute(
             """
             UPDATE games
-               SET home_score = ?, away_score = ?, status = ?, updated_at = NOW()
+               SET home_score = ?, away_score = ?, status = ?, updated_at = CURRENT_TIMESTAMP
              WHERE id = ?
             """,
             (int(home_score), int(away_score), status, game_id),
@@ -131,7 +131,7 @@ class Game:
                 home_team, away_team, home_crest, away_crest, match_datetime,
                 home_score, away_score, api_status, status, last_synced_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(external_match_id) DO UPDATE SET
                 competition_code = EXCLUDED.competition_code,
                 competition_name = EXCLUDED.competition_name,
@@ -145,8 +145,8 @@ class Game:
                 away_score = EXCLUDED.away_score,
                 api_status = EXCLUDED.api_status,
                 status = EXCLUDED.status,
-                last_synced_at = NOW(),
-                updated_at = NOW()
+                last_synced_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP
             RETURNING id
             """,
             (

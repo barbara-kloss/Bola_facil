@@ -18,19 +18,19 @@
     <strong>{{ total }}</strong>
   </div>
   <div class="history-stat history-stat--exact">
-    <span>✅ Placar Exato</span>
+    <span>Placar Exato</span>
     <strong>{{ exatos }}</strong>
   </div>
   <div class="history-stat history-stat--winner">
-    <span>⭐ Acertou Vencedor</span>
+    <span>Acertou Vencedor</span>
     <strong>{{ vencedores }}</strong>
   </div>
   <div class="history-stat history-stat--miss">
-    <span>❌ Errou</span>
+    <span>Errou</span>
     <strong>{{ erros }}</strong>
   </div>
   <div class="history-stat history-stat--pending">
-    <span>⏳ Aguardando</span>
+    <span>Aguardando</span>
     <strong>{{ pendentes }}</strong>
   </div>
 </div>
@@ -44,13 +44,13 @@
       <!-- Badge de resultado -->
       <div class="history-result-badge">
         {% if res == 'exact' %}
-          <span class="result-pill result-exact">✅ Placar Exato</span>
+          <span class="result-pill result-exact">Placar Exato</span>
         {% elif res == 'winner' %}
-          <span class="result-pill result-winner">⭐ Acertou Vencedor</span>
+          <span class="result-pill result-winner">Acertou Vencedor</span>
         {% elif res == 'miss' %}
-          <span class="result-pill result-miss">❌ Errou</span>
+          <span class="result-pill result-miss">Errou</span>
         {% else %}
-          <span class="result-pill result-pending">⏳ Aguardando</span>
+          <span class="result-pill result-pending">Aguardando</span>
         {% endif %}
         {% if r.points_earned is not none and r.points_earned > 0 %}
           <span class="points-pill">+{{ r.points_earned }} pts</span>

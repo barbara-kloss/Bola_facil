@@ -24,15 +24,15 @@ def dashboard():
         "total_users": db.execute("SELECT COUNT(*) FROM users").fetchone()[0],
     }
 
-    # Jogos por mês (últimos 6 meses)
+    # Jogos por mês (últimos 6 meses) — SQLite compatible
     monthly = db.execute(
         """
-        SELECT TO_CHAR(match_datetime, 'Mon/YY') AS month,
+        SELECT strftime('%m/%Y', match_datetime) AS month,
                COUNT(*) AS total
           FROM games
-         WHERE match_datetime >= NOW() - INTERVAL '6 months'
-         GROUP BY TO_CHAR(match_datetime, 'Mon/YY'), DATE_TRUNC('month', match_datetime)
-         ORDER BY DATE_TRUNC('month', match_datetime)
+         WHERE match_datetime >= datetime('now', '-6 months')
+         GROUP BY strftime('%Y-%m', match_datetime)
+         ORDER BY strftime('%Y-%m', match_datetime)
         """
     ).fetchall()
     monthly_labels = [r["month"] for r in monthly]

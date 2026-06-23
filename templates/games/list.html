@@ -11,7 +11,7 @@
 </section>
 
 {# ── Filtros ── #}
-<form method="get" action="{{ url_for('games.list_games') }}" class="filters-bar" id="filters-form">
+<form method="get" action="{{ url_for('games.list_games') }}" class="filter-bar" id="filters-form">
   <div class="filter-group">
     <label for="filter-campeonato">Campeonato</label>
     <select id="filter-campeonato" name="campeonato" onchange="this.form.submit()">

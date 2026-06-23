@@ -14,7 +14,7 @@ class Bet:
             ON CONFLICT(user_id, game_id) DO UPDATE SET
                 predicted_home_score = EXCLUDED.predicted_home_score,
                 predicted_away_score = EXCLUDED.predicted_away_score,
-                updated_at = NOW()
+                updated_at = CURRENT_TIMESTAMP
             RETURNING id
             """,
             (user_id, game_id, predicted_home_score, predicted_away_score),
@@ -54,7 +54,7 @@ class Bet:
     @staticmethod
     def update_points(bet_id, points_earned):
         _db().execute(
-            "UPDATE bets SET points_earned = ?, updated_at = NOW() WHERE id = ?",
+            "UPDATE bets SET points_earned = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
             (points_earned, bet_id),
         )
         _db().commit()

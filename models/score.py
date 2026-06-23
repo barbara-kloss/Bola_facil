@@ -10,10 +10,10 @@ class Score:
         _db().execute(
             """
             INSERT INTO scores (pool_id, user_id, total_points, updated_at)
-            VALUES (?, ?, ?, NOW())
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(pool_id, user_id) DO UPDATE SET
                 total_points = EXCLUDED.total_points,
-                updated_at = NOW()
+                updated_at = CURRENT_TIMESTAMP
             """,
             (pool_id, user_id, total_points),
         )
