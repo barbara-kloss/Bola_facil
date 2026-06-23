@@ -24,23 +24,62 @@
           <a href="{{ url_for('admin.dashboard') }}">Dashboard</a>
           <a href="{{ url_for('games.list_games') }}">Jogos</a>
           <a href="{{ url_for('admin.users') }}">Usuários</a>
-          <a href="{{ url_for('notification.inbox') }}" class="nav-notification">
-            Notificações <span id="notification-badge" class="badge" style="display: none;">0</span>
-          </a>
         {% else %}
           <a href="{{ url_for('games.list_games') }}">Jogos</a>
           <a href="{{ url_for('ranking.index') }}">Ranking</a>
           <a href="{{ url_for('chat.list_groups') }}">Grupos</a>
           <a href="{{ url_for('chat.bot_chat') }}">Bot</a>
-          <a href="{{ url_for('notification.inbox') }}" class="nav-notification">
-            Notificações <span id="notification-badge" class="badge" style="display: none;">0</span>
-          </a>
         {% endif %}
-        <a href="{{ url_for('auth.profile') }}">Perfil</a>
-        <form method="post" action="{{ url_for('auth.logout') }}" style="display: inline; margin: 0;" id="logout-form">
-          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-          <button type="button" class="nav-logout-btn" onclick="showConfirmModal('Tem certeza que deseja sair?', () => document.getElementById('logout-form').submit())">Sair</button>
-        </form>
+
+        <!-- Sino de Notificações -->
+        <div class="notif-dropdown-wrap" id="notif-wrap">
+          <button class="notif-bell-btn" id="notif-bell-btn" aria-label="Notificações" type="button">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span id="notification-badge" class="badge" style="display:none;">0</span>
+          </button>
+          <div class="notif-dropdown" id="notif-dropdown">
+            <div class="notif-dropdown-header">
+              <span>Notificações</span>
+              <button class="notif-mark-all" id="notif-mark-all-btn" type="button">Marcar todas como lidas</button>
+            </div>
+            <div class="notif-dropdown-list" id="notif-dropdown-list">
+              <div class="notif-empty">Carregando...</div>
+            </div>
+            <a href="{{ url_for('notification.inbox') }}" class="notif-view-all">Ver todas</a>
+          </div>
+        </div>
+
+        <!-- Menu Bonequinho -->
+        <div class="user-menu-wrap" id="user-menu-wrap">
+          <button class="user-menu-btn" id="user-menu-btn" aria-label="Menu do usuário" type="button">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="12" cy="8" r="4"/>
+              <path d="M20 21a8 8 0 1 0-16 0"/>
+            </svg>
+          </button>
+          <div class="user-dropdown" id="user-dropdown">
+            <div class="user-dropdown-name">{{ current_user.name }}</div>
+            <a href="{{ url_for('auth.profile') }}" class="user-dropdown-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+              Perfil
+            </a>
+            <a href="{{ url_for('bets.bet_history') }}" class="user-dropdown-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              Meus Palpites
+            </a>
+            <div class="user-dropdown-divider"></div>
+            <form method="post" action="{{ url_for('auth.logout') }}" style="margin:0;" id="logout-form">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <button type="button" class="user-dropdown-item user-dropdown-logout" onclick="showConfirmModal('Tem certeza que deseja sair?', () => document.getElementById('logout-form').submit())">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Sair
+              </button>
+            </form>
+          </div>
+        </div>
       </nav>
     {% endif %}
   </header>
@@ -114,6 +153,76 @@
       }
       return originalFetch(resource, config);
     };
+
+    // --- Dropdown: Notificações ---
+    const notifWrap = document.getElementById('notif-wrap');
+    const notifBtn = document.getElementById('notif-bell-btn');
+    const notifDropdown = document.getElementById('notif-dropdown');
+
+    if (notifBtn) {
+      notifBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const isOpen = notifDropdown.classList.contains('open');
+        closeAllDropdowns();
+        if (!isOpen) {
+          notifDropdown.classList.add('open');
+          loadNotifDropdown();
+        }
+      });
+    }
+
+    async function loadNotifDropdown() {
+      const list = document.getElementById('notif-dropdown-list');
+      try {
+        const res = await fetch('/notificacoes/recentes');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.notifications && data.notifications.length > 0) {
+            list.innerHTML = data.notifications.map(n => `
+              <div class="notif-item ${n.read ? '' : 'notif-item--unread'}" data-id="${n.id}">
+                <div class="notif-item-title">${n.title}</div>
+                <div class="notif-item-body">${n.body || ''}</div>
+              </div>
+            `).join('');
+          } else {
+            list.innerHTML = '<div class="notif-empty">Nenhuma notificação.</div>';
+          }
+        }
+      } catch(e) { list.innerHTML = '<div class="notif-empty">Erro ao carregar.</div>'; }
+    }
+
+    // Marcar todas como lidas via dropdown
+    const markAllBtn = document.getElementById('notif-mark-all-btn');
+    if (markAllBtn) {
+      markAllBtn.addEventListener('click', async function() {
+        await fetch('/notificacoes/read-all', { method: 'POST' });
+        const badge = document.getElementById('notification-badge');
+        if (badge) badge.style.display = 'none';
+        document.querySelectorAll('.notif-item--unread').forEach(el => el.classList.remove('notif-item--unread'));
+        if (typeof lastKnownCount !== 'undefined') window.lastKnownCount = 0;
+      });
+    }
+
+    // --- Dropdown: Menu Bonequinho ---
+    const userWrap = document.getElementById('user-menu-wrap');
+    const userBtn = document.getElementById('user-menu-btn');
+    const userDropdown = document.getElementById('user-dropdown');
+
+    if (userBtn) {
+      userBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const isOpen = userDropdown.classList.contains('open');
+        closeAllDropdowns();
+        if (!isOpen) userDropdown.classList.add('open');
+      });
+    }
+
+    function closeAllDropdowns() {
+      if (notifDropdown) notifDropdown.classList.remove('open');
+      if (userDropdown) userDropdown.classList.remove('open');
+    }
+
+    document.addEventListener('click', closeAllDropdowns);
   </script>
   {% if current_user.is_authenticated %}
   <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>

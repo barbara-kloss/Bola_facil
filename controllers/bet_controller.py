@@ -80,3 +80,62 @@ def bet_game(game_id):
         )
 
     return render_template("bets/form.html", game=game, bet=existing_bet, is_closed=is_closed, lockout_minutes=lockout_minutes)
+
+
+@bet_bp.route("/historico", methods=["GET"])
+@login_required
+def bet_history():
+    """Histórico de todos os palpites do usuário logado."""
+    from app import get_db
+    db = get_db()
+    rows = db.execute(
+        """
+        SELECT
+            b.id AS bet_id,
+            b.predicted_home_score,
+            b.predicted_away_score,
+            b.points_earned,
+            b.created_at AS bet_created_at,
+            g.id AS game_id,
+            g.home_team,
+            g.away_team,
+            g.home_crest,
+            g.away_crest,
+            g.home_score,
+            g.away_score,
+            g.status AS game_status,
+            g.match_datetime,
+            g.competition_name,
+            g.matchday
+        FROM bets b
+        JOIN games g ON g.id = b.game_id
+        WHERE b.user_id = ?
+        ORDER BY g.match_datetime DESC
+        """,
+        (current_user.id,),
+    ).fetchall()
+
+    def _result_status(row):
+        if row["game_status"] != "finished":
+            return "pending"
+        if row["home_score"] is None or row["away_score"] is None:
+            return "pending"
+        ph = int(row["predicted_home_score"])
+        pa = int(row["predicted_away_score"])
+        ah = int(row["home_score"])
+        aa = int(row["away_score"])
+        if ph == ah and pa == aa:
+            return "exact"
+        def winner(h, a): return "home" if h > a else ("away" if a > h else "draw")
+        if winner(ph, pa) == winner(ah, aa):
+            return "winner"
+        return "miss"
+
+    bets = []
+    for row in rows:
+        bets.append({
+            "row": row,
+            "result": _result_status(row),
+        })
+
+    return render_template("bets/history.html", bets=bets, format_match_time=format_match_time)

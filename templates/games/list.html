@@ -2,16 +2,37 @@
 {% block title %}Jogos - {{ brand_name }}{% endblock %}
 {% block content %}
 <section class="content-head">
-  <h1>Jogos</h1>
-  <p>{{ pool.name if pool else "Bolão Principal" }}</p>
-  {% if current_user.is_admin %}
-  <a class="button-secondary" href="{{ url_for('sync_games') }}">Sincronizar Brasileirão</a>
-  {% endif %}
+  <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+    <h1 style="margin:0;">Jogos</h1>
+    {% if current_user.is_admin %}
+    <a class="button-secondary" href="{{ url_for('sync_games') }}">Sincronizar Brasileirão</a>
+    {% endif %}
+  </div>
 </section>
+
+<!-- Barra de Filtros -->
+<div class="filter-bar" id="filter-bar">
+  <div class="filter-search-wrap">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--gray-dark);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="filter-search" placeholder="Buscar time..." class="filter-search-input">
+  </div>
+  <div class="filter-chips" id="filter-chips">
+    <button class="filter-chip active" data-comp="">Todos</button>
+    <!-- chips gerados via JS -->
+  </div>
+  <div class="filter-status-wrap">
+    <select id="filter-status" class="filter-status-select">
+      <option value="">Todos os status</option>
+      <option value="scheduled">Agendados</option>
+      <option value="live">Ao Vivo</option>
+      <option value="finished">Finalizados</option>
+    </select>
+  </div>
+</div>
 
 <section class="games-layout{% if not current_user.is_admin %} games-layout--full{% endif %}">
   <div class="table-section">
-    <div class="api-match-board">
+    <div class="api-match-board" id="match-board">
       <div class="match-table-head">
         <span>Data/Status</span>
         <span>Oponentes</span>
@@ -20,7 +41,12 @@
       </div>
       {% for game in games %}
         {% set match_time = format_match_time(game.match_datetime) %}
-        <article class="match-row">
+        {% set comp_key = game.competition_name or '' %}
+        <article class="match-row"
+          data-home="{{ game.home_team|lower }}"
+          data-away="{{ game.away_team|lower }}"
+          data-comp="{{ comp_key }}"
+          data-status="{{ game.status }}">
           <div class="match-date">
             {% if game.status == "finished" %}
               <span class="status-pill status-finished">FINALIZADO</span>
@@ -36,14 +62,14 @@
                 {% if game.home_crest %}<img src="{{ game.home_crest }}" alt="">{% endif %}
                 {{ game.home_team }}
               </span>
-              <strong>vs.</strong>
+              <strong class="vs-label">vs.</strong>
               <span class="team-name">
                 {% if game.away_crest %}<img src="{{ game.away_crest }}" alt="">{% endif %}
                 {{ game.away_team }}
               </span>
             </div>
             {% if game.competition_name or game.matchday %}
-            <span class="match-meta">
+            <span class="match-meta comp-tag" data-comp="{{ comp_key }}">
               {% if game.competition_name %}{{ game.competition_name }}{% endif %}{% if game.matchday %} &bull; Rodada {{ game.matchday }}{% endif %}
             </span>
             {% endif %}
@@ -65,6 +91,7 @@
       {% else %}
         <div class="empty-state">Nenhum jogo cadastrado ainda.</div>
       {% endfor %}
+      <div class="empty-state" id="no-results" style="display:none;">Nenhum jogo encontrado com esses filtros.</div>
     </div>
 
     {% if total_pages > 1 %}
@@ -100,21 +127,155 @@
   {% endif %}
 </section>
 
+<style>
+/* ── Filtros ─────────────────────────── */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+  background: var(--white);
+  border: 1px solid var(--blue-light);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+}
+.filter-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--gray-light);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  flex: 1;
+  min-width: 160px;
+}
+.filter-search-input {
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  width: 100%;
+  font-size: 0.9rem;
+  box-shadow: none !important;
+  outline: none !important;
+}
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.filter-chip {
+  background: var(--blue-light);
+  border: 1.5px solid var(--blue-light);
+  border-radius: 999px;
+  color: var(--blue-dark);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.filter-chip:hover { background: var(--blue); color: var(--white); }
+.filter-chip.active { background: var(--blue-dark); border-color: var(--blue-dark); color: var(--white); }
+.filter-status-select {
+  border: 1.5px solid var(--blue-light) !important;
+  border-radius: var(--radius) !important;
+  font-size: 0.85rem !important;
+  padding: 8px 12px !important;
+  width: auto !important;
+  color: var(--ink);
+}
+/* Vs centralizado */
+.vs-label {
+  text-align: center;
+  font-size: 1rem;
+  color: rgba(255,255,255,0.5);
+}
+
+/* Tags coloridas de campeonato */
+.comp-tag[data-comp*="Brasileirão"],
+.comp-tag[data-comp*="Serie A"],
+.comp-tag[data-comp*="Campeonato Brasileiro"] {
+  background: rgba(0,166,81,0.2);
+  color: var(--green);
+}
+.comp-tag[data-comp*="Copa"],
+.comp-tag[data-comp*="World Cup"],
+.comp-tag[data-comp*="Copa do Mundo"] {
+  background: rgba(255,215,0,0.25);
+  color: #856404;
+}
+.comp-tag[data-comp*="Champions"],
+.comp-tag[data-comp*="Libertadores"] {
+  background: rgba(0,48,135,0.15);
+  color: var(--blue-dark);
+}
+.comp-tag[data-comp*="Premier"],
+.comp-tag[data-comp*="La Liga"],
+.comp-tag[data-comp*="Bundesliga"],
+.comp-tag[data-comp*="Serie A IT"],
+.comp-tag[data-comp*="Ligue 1"] {
+  background: rgba(26,85,160,0.12);
+  color: var(--blue);
+}
+</style>
+
 <script>
-// Adicionar feedback visual ao criar jogo
+// --- Filtros de jogos ---
+const rows = Array.from(document.querySelectorAll('.match-row'));
+const searchInput = document.getElementById('filter-search');
+const chipsContainer = document.getElementById('filter-chips');
+const statusSelect = document.getElementById('filter-status');
+const noResults = document.getElementById('no-results');
+
+// Coletar campeonatos únicos
+const comps = [...new Set(rows.map(r => r.dataset.comp).filter(Boolean))];
+comps.forEach(comp => {
+  const btn = document.createElement('button');
+  btn.className = 'filter-chip';
+  btn.dataset.comp = comp;
+  btn.textContent = comp;
+  btn.type = 'button';
+  chipsContainer.appendChild(btn);
+});
+
+function applyFilters() {
+  const search = searchInput.value.toLowerCase().trim();
+  const comp = chipsContainer.querySelector('.filter-chip.active')?.dataset.comp || '';
+  const status = statusSelect.value;
+  let visible = 0;
+  rows.forEach(row => {
+    const matchesSearch = !search || row.dataset.home.includes(search) || row.dataset.away.includes(search);
+    const matchesComp = !comp || row.dataset.comp === comp;
+    const matchesStatus = !status || row.dataset.status === status;
+    const show = matchesSearch && matchesComp && matchesStatus;
+    row.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  noResults.style.display = visible === 0 ? '' : 'none';
+}
+
+chipsContainer.addEventListener('click', function(e) {
+  const chip = e.target.closest('.filter-chip');
+  if (!chip) return;
+  chipsContainer.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  applyFilters();
+});
+
+searchInput.addEventListener('input', applyFilters);
+statusSelect.addEventListener('change', applyFilters);
+
+// Criar jogo feedback
 const form = document.querySelector('form.side-form');
 if (form) {
   form.addEventListener('submit', function(e) {
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
-    
     submitBtn.disabled = true;
     submitBtn.textContent = 'Criando...';
-    
-    setTimeout(() => {
-      submitBtn.disabled = false;
-      submitBtn.textContent = originalText;
-    }, 2000);
+    setTimeout(() => { submitBtn.disabled = false; submitBtn.textContent = originalText; }, 2000);
   });
 }
 

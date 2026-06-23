@@ -1,0 +1,12 @@
+.pytest_cache
+pytest-cache
+pytest-temp
+.git
+.agents
+*.db
+venv
+.env
+__pycache__
+*.pyc
+flask.local.err.log
+flask.local.out.log

@@ -50,10 +50,17 @@ def format_match_time(value):
 
 def match_status_label(status, api_status=None):
     labels = {
-        "scheduled": "TIMED",
+        "scheduled": "AGENDADO",
         "live": "AO VIVO",
         "in_progress": "EM ANDAMENTO",
-        "finished": "FINISHED",
+        "finished": "FINALIZADO",
         "cancelled": "CANCELADO",
+        "timed": "AGENDADO",
+        "ns": "NÃO INICIADO",
+        "pst": "ADIADO",
+        "canc": "CANCELADO",
     }
-    return api_status or labels.get(status, status.upper())
+    # api_status pode vir como "TIMED", "NS", "PST", etc. — traduzir também
+    if api_status:
+        return labels.get(api_status.lower(), api_status)
+    return labels.get(status, status.upper())

@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}Meus Palpites - {{ brand_name }}{% endblock %}
+{% block content %}
+<section class="content-head">
+  <h1>Meus Palpites</h1>
+  <p style="color: var(--gray-dark); margin: 0;">Histórico completo de todos os seus palpites.</p>
+</section>
+
+<!-- Resumo -->
+<div class="history-summary">
+  {% set total = bets|length %}
+  {% set exatos = bets|selectattr('result', 'equalto', 'exact')|list|length %}
+  {% set vencedores = bets|selectattr('result', 'equalto', 'winner')|list|length %}
+  {% set erros = bets|selectattr('result', 'equalto', 'miss')|list|length %}
+  {% set pendentes = bets|selectattr('result', 'equalto', 'pending')|list|length %}
+  <div class="history-stat">
+    <span>Total</span>
+    <strong>{{ total }}</strong>
+  </div>
+  <div class="history-stat history-stat--exact">
+    <span>✅ Placar Exato</span>
+    <strong>{{ exatos }}</strong>
+  </div>
+  <div class="history-stat history-stat--winner">
+    <span>⭐ Acertou Vencedor</span>
+    <strong>{{ vencedores }}</strong>
+  </div>
+  <div class="history-stat history-stat--miss">
+    <span>❌ Errou</span>
+    <strong>{{ erros }}</strong>
+  </div>
+  <div class="history-stat history-stat--pending">
+    <span>⏳ Aguardando</span>
+    <strong>{{ pendentes }}</strong>
+  </div>
+</div>
+
+<!-- Lista de palpites -->
+<div class="history-list">
+  {% for item in bets %}
+    {% set r = item.row %}
+    {% set res = item.result %}
+    <div class="history-card history-card--{{ res }}">
+      <!-- Badge de resultado -->
+      <div class="history-result-badge">
+        {% if res == 'exact' %}
+          <span class="result-pill result-exact">✅ Placar Exato</span>
+        {% elif res == 'winner' %}
+          <span class="result-pill result-winner">⭐ Acertou Vencedor</span>
+        {% elif res == 'miss' %}
+          <span class="result-pill result-miss">❌ Errou</span>
+        {% else %}
+          <span class="result-pill result-pending">⏳ Aguardando</span>
+        {% endif %}
+        {% if r.points_earned is not none and r.points_earned > 0 %}
+          <span class="points-pill">+{{ r.points_earned }} pts</span>
+        {% endif %}
+      </div>
+
+      <!-- Times -->
+      <div class="history-teams">
+        <div class="history-team">
+          {% if r.home_crest %}<img src="{{ r.home_crest }}" alt="{{ r.home_team }}">{% endif %}
+          <span>{{ r.home_team }}</span>
+        </div>
+        <div class="history-scores">
+          <div class="history-score-row">
+            <span class="score-label">Palpite</span>
+            <span class="score-value score-bet">{{ r.predicted_home_score }} × {{ r.predicted_away_score }}</span>
+          </div>
+          {% if r.game_status == 'finished' and r.home_score is not none %}
+          <div class="history-score-row">
+            <span class="score-label">Real</span>
+            <span class="score-value score-real">{{ r.home_score }} × {{ r.away_score }}</span>
+          </div>
+          {% else %}
+          <div class="history-score-row">
+            <span class="score-label">-</span>
+            <span class="score-value">-:-</span>
+          </div>
+          {% endif %}
+        </div>
+        <div class="history-team history-team--right">
+          {% if r.away_crest %}<img src="{{ r.away_crest }}" alt="{{ r.away_team }}">{% endif %}
+          <span>{{ r.away_team }}</span>
+        </div>
+      </div>
+
+      <!-- Meta -->
+      <div class="history-meta">
+        {% if r.competition_name %}
+          <span class="match-meta">{{ r.competition_name }}{% if r.matchday %} · Rodada {{ r.matchday }}{% endif %}</span>
+        {% endif %}
+        <span class="history-date">{{ format_match_time(r.match_datetime).date }} {{ format_match_time(r.match_datetime).time }}</span>
+        <a href="{{ url_for('games.game_detail', game_id=r.game_id) }}" class="button-secondary" style="padding: 5px 12px; font-size: 0.8rem;">Ver jogo</a>
+      </div>
+    </div>
+  {% else %}
+    <div class="empty-state">Você ainda não fez nenhum palpite. <a href="{{ url_for('games.list_games') }}" class="text-link">Palpitar agora!</a></div>
+  {% endfor %}
+</div>
+
+<style>
+.history-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.history-stat {
+  background: var(--white);
+  border: 1px solid var(--blue-light);
+  border-radius: var(--radius);
+  padding: 14px 20px;
+  text-align: center;
+  flex: 1;
+  min-width: 100px;
+}
+.history-stat span { display: block; font-size: 0.82rem; color: var(--gray-dark); font-weight: 600; margin-bottom: 4px; }
+.history-stat strong { font-size: 1.6rem; color: var(--blue-dark); font-weight: 800; }
+.history-stat--exact { border-top: 3px solid #22c55e; }
+.history-stat--winner { border-top: 3px solid #f59e0b; }
+.history-stat--miss { border-top: 3px solid #ef4444; }
+.history-stat--pending { border-top: 3px solid var(--blue); }
+
+.history-list { display: flex; flex-direction: column; gap: 14px; }
+
+.history-card {
+  background: var(--white);
+  border: 1px solid var(--blue-light);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.history-card--exact  { border-left: 4px solid #22c55e; }
+.history-card--winner { border-left: 4px solid #f59e0b; }
+.history-card--miss   { border-left: 4px solid #ef4444; }
+.history-card--pending { border-left: 4px solid var(--blue); }
+
+.history-result-badge { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.result-pill {
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 4px 12px;
+  color: var(--white);
+}
+.result-exact  { background: #22c55e; }
+.result-winner { background: #f59e0b; }
+.result-miss   { background: #ef4444; }
+.result-pending { background: var(--blue); }
+
+.points-pill {
+  background: var(--green);
+  border-radius: 999px;
+  color: var(--white);
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 4px 12px;
+}
+
+.history-teams {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: center;
+}
+.history-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.history-team img { height: 24px; width: 28px; object-fit: contain; }
+.history-team--right { justify-content: flex-end; flex-direction: row-reverse; }
+
+.history-scores { text-align: center; }
+.history-score-row { display: flex; align-items: center; gap: 8px; justify-content: center; }
+.score-label { font-size: 0.72rem; color: var(--gray-dark); font-weight: 700; min-width: 42px; text-align: right; }
+.score-value { font-size: 1.05rem; font-weight: 800; }
+.score-bet { color: var(--blue-dark); }
+.score-real { color: var(--green-dark); }
+
+.history-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.history-date { font-size: 0.82rem; color: var(--gray-dark); font-weight: 600; margin-left: auto; }
+
+@media (max-width: 600px) {
+  .history-teams { grid-template-columns: 1fr; gap: 8px; }
+  .history-team--right { justify-content: flex-start; flex-direction: row; }
+  .history-summary { gap: 8px; }
+  .history-stat { min-width: calc(50% - 8px); }
+}
+</style>
+{% endblock %}

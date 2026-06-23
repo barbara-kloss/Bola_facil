@@ -29,9 +29,23 @@
         <td style="padding: 1rem;">{{ u.created_at }}</td>
         <td style="padding: 1rem;">
           {% if u.id|string != current_user.id|string %}
-          <button class="button-secondary toggle-role-btn" data-user-id="{{ u.id }}">
-            {{ 'Remover Admin' if u.is_admin else 'Tornar Admin' }}
-          </button>
+          <div class="action-menu-wrap" style="position:relative; display:inline-block;">
+            <button class="button-secondary action-menu-btn" data-user-id="{{ u.id }}" data-user-name="{{ u.name }}" data-is-admin="{{ 'true' if u.is_admin else 'false' }}" style="padding: 7px 14px; font-size: 0.85rem;">
+              Ações ▾
+            </button>
+            <div class="action-menu-dropdown" style="display:none; position:absolute; right:0; top:100%; background:var(--white); border:1px solid var(--blue-light); border-radius:var(--radius); box-shadow:var(--shadow-md); min-width:190px; z-index:100; overflow:hidden;">
+              <button class="action-item action-notif" data-user-id="{{ u.id }}" data-user-name="{{ u.name }}" type="button">
+                🔔 Enviar Notificação
+              </button>
+              <button class="action-item action-toggle-role" data-user-id="{{ u.id }}" data-is-admin="{{ 'true' if u.is_admin else 'false' }}" type="button">
+                {% if u.is_admin %}👑 Remover Admin{% else %}👑 Tornar Admin{% endif %}
+              </button>
+              <div style="border-top:1px solid var(--blue-light); margin:2px 0;"></div>
+              <button class="action-item action-delete" data-user-id="{{ u.id }}" data-user-name="{{ u.name }}" type="button" style="color: #ef4444;">
+                🗑️ Excluir Usuário
+              </button>
+            </div>
+          </div>
           {% else %}
           <span style="color: var(--text-color-muted); font-size: 0.85rem;">Você</span>
           {% endif %}
@@ -44,7 +58,52 @@
   </table>
 </section>
 
+<!-- Modal de Notificação -->
+<div class="modal-overlay" id="notif-modal">
+  <div class="custom-modal">
+    <div class="modal-header">
+      <h3>Enviar Notificação</h3>
+      <button class="modal-close-btn" onclick="closeNotifModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p>Enviando para: <strong id="notif-user-name"></strong></p>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label for="notif-title">Título</label>
+        <input type="text" id="notif-title" placeholder="Ex: Lembrete de palpite" maxlength="100">
+      </div>
+      <div class="form-group">
+        <label for="notif-body">Mensagem</label>
+        <textarea id="notif-body" placeholder="Escreva a mensagem..." rows="3"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="button-secondary" onclick="closeNotifModal()">Cancelar</button>
+      <button class="button-primary" id="notif-send-btn" onclick="sendNotification()">Enviar</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.action-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 10px 16px;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--ink);
+  border-radius: 0;
+  transition: background 0.12s;
+}
+.action-item:hover { background: var(--gray-light); }
+</style>
+
 <script>
+// --- Formatação de telefone ---
 document.querySelectorAll('.phone-number').forEach(el => {
   let text = el.textContent.trim();
   if (text !== '-' && text.length >= 10) {
@@ -56,29 +115,94 @@ document.querySelectorAll('.phone-number').forEach(el => {
   }
 });
 
-document.querySelectorAll('.toggle-role-btn').forEach(btn => {
+// --- Dropdowns de ação ---
+document.querySelectorAll('.action-menu-btn').forEach(btn => {
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const dropdown = this.nextElementSibling;
+    const isOpen = dropdown.style.display === 'block';
+    // fechar todos
+    document.querySelectorAll('.action-menu-dropdown').forEach(d => d.style.display = 'none');
+    if (!isOpen) dropdown.style.display = 'block';
+  });
+});
+document.addEventListener('click', () => {
+  document.querySelectorAll('.action-menu-dropdown').forEach(d => d.style.display = 'none');
+});
+
+// --- Ação: Toggle Role ---
+document.querySelectorAll('.action-toggle-role').forEach(btn => {
   btn.addEventListener('click', async function() {
-    const userId = this.getAttribute('data-user-id');
-    const originalText = this.textContent;
-    this.disabled = true;
-    this.textContent = 'Aguarde...';
-    
-    try {
-      const res = await fetch(`/admin/users/${userId}/role`, { method: 'POST' });
-      const data = await res.json();
-      
-      if (res.ok) {
-        window.location.reload();
-      } else {
-        Toast.error(data.error || 'Erro ao alterar papel.');
-        this.disabled = false;
-        this.textContent = originalText;
-      }
-    } catch (err) {
-      Toast.error('Erro de conexão.');
-      this.disabled = false;
-      this.textContent = originalText;
+    const userId = this.dataset.userId;
+    const isAdmin = this.dataset.isAdmin === 'true';
+    const action = isAdmin ? 'Remover Admin' : 'Tornar Admin';
+    showConfirmModal(`Deseja ${action} deste usuário?`, async () => {
+      try {
+        const res = await fetch(`/admin/users/${userId}/role`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) { window.location.reload(); }
+        else { Toast.error(data.error || 'Erro ao alterar papel.'); }
+      } catch(err) { Toast.error('Erro de conexão.'); }
+    });
+  });
+});
+
+// --- Ação: Enviar Notificação ---
+let _notifUserId = null;
+document.querySelectorAll('.action-notif').forEach(btn => {
+  btn.addEventListener('click', function() {
+    _notifUserId = this.dataset.userId;
+    document.getElementById('notif-user-name').textContent = this.dataset.userName;
+    document.getElementById('notif-title').value = '';
+    document.getElementById('notif-body').value = '';
+    document.getElementById('notif-modal').classList.add('active');
+    document.querySelectorAll('.action-menu-dropdown').forEach(d => d.style.display = 'none');
+  });
+});
+
+function closeNotifModal() {
+  document.getElementById('notif-modal').classList.remove('active');
+  _notifUserId = null;
+}
+
+async function sendNotification() {
+  const title = document.getElementById('notif-title').value.trim();
+  const body = document.getElementById('notif-body').value.trim();
+  if (!title) { Toast.error('Informe um título.'); return; }
+  const btn = document.getElementById('notif-send-btn');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+  try {
+    const res = await fetch(`/admin/users/${_notifUserId}/notify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, body })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      Toast.success('Notificação enviada!');
+      closeNotifModal();
+    } else {
+      Toast.error(data.error || 'Erro ao enviar.');
     }
+  } catch(e) { Toast.error('Erro de conexão.'); }
+  btn.disabled = false;
+  btn.textContent = 'Enviar';
+}
+
+// --- Ação: Excluir Usuário ---
+document.querySelectorAll('.action-delete').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const userId = this.dataset.userId;
+    const userName = this.dataset.userName;
+    showConfirmModal(`Tem certeza que deseja EXCLUIR permanentemente o usuário "${userName}"? Esta ação não pode ser desfeita.`, async () => {
+      try {
+        const res = await fetch(`/admin/users/${userId}/delete`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) { Toast.success('Usuário excluído.'); window.location.reload(); }
+        else { Toast.error(data.error || 'Erro ao excluir.'); }
+      } catch(e) { Toast.error('Erro de conexão.'); }
+    });
   });
 });
 </script>

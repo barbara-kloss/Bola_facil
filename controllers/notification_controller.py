@@ -8,6 +8,8 @@ notification_bp = Blueprint("notification", __name__)
 @login_required
 def inbox():
     notifications = Notification.list_for_user(current_user.id)
+    # Marcar automaticamente como lidas ao abrir a página
+    Notification.mark_all_read(current_user.id)
     return render_template("notifications/inbox.html", notifications=notifications)
 
 @notification_bp.route("/notificacoes/unread-count", methods=["GET"])
@@ -15,6 +17,24 @@ def inbox():
 def unread_count():
     count = Notification.count_unread(current_user.id)
     return jsonify({"count": count})
+
+@notification_bp.route("/notificacoes/recentes", methods=["GET"])
+@login_required
+def recent():
+    """Retorna as últimas 5 notificações para o dropdown."""
+    all_notifs = Notification.list_for_user(current_user.id)
+    recent_notifs = all_notifs[:5]
+    return jsonify({
+        "notifications": [
+            {
+                "id": n["id"],
+                "title": n["title"],
+                "body": n["body"] or "",
+                "read": bool(n["read"]),
+            }
+            for n in recent_notifs
+        ]
+    })
 
 @notification_bp.route("/notificacoes/<int:notification_id>/read", methods=["POST"])
 @login_required

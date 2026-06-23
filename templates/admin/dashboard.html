@@ -3,9 +3,58 @@
 {% block content %}
 <section class="content-head">
   <h1>Dashboard de Administração</h1>
+  <p style="color: var(--gray-dark); margin: 0;">Visão geral do bolão em tempo real.</p>
 </section>
 
-<section class="dashboard-cards">
+<!-- Cards de status dos jogos -->
+<div class="adm-stats-grid">
+  <div class="adm-stat-card adm-stat--live">
+    <div class="adm-stat-icon">⚽</div>
+    <div class="adm-stat-body">
+      <span>Ao Vivo</span>
+      <strong>{{ stats.live }}</strong>
+    </div>
+  </div>
+  <div class="adm-stat-card adm-stat--scheduled">
+    <div class="adm-stat-icon">📅</div>
+    <div class="adm-stat-body">
+      <span>Agendados</span>
+      <strong>{{ stats.scheduled }}</strong>
+    </div>
+  </div>
+  <div class="adm-stat-card adm-stat--finished">
+    <div class="adm-stat-icon">🏁</div>
+    <div class="adm-stat-body">
+      <span>Finalizados</span>
+      <strong>{{ stats.finished }}</strong>
+    </div>
+  </div>
+  <div class="adm-stat-card adm-stat--bets">
+    <div class="adm-stat-icon">🎯</div>
+    <div class="adm-stat-body">
+      <span>Palpites</span>
+      <strong>{{ stats.total_bets }}</strong>
+    </div>
+  </div>
+  <div class="adm-stat-card adm-stat--users">
+    <div class="adm-stat-icon">👥</div>
+    <div class="adm-stat-body">
+      <span>Usuários</span>
+      <strong>{{ stats.total_users }}</strong>
+    </div>
+  </div>
+</div>
+
+<!-- Gráfico de jogos por mês -->
+<div class="adm-chart-section">
+  <div class="adm-chart-card">
+    <h2>Jogos por Mês</h2>
+    <canvas id="monthlyChart" height="280"></canvas>
+  </div>
+</div>
+
+<!-- Atalhos de Administração -->
+<div class="dashboard-cards" style="margin-top:24px;">
   <div class="card">
     <h2>Gerenciar Jogos</h2>
     <p>Adicione, sincronize e defina resultados de jogos.</p>
@@ -13,7 +62,7 @@
   </div>
   <div class="card">
     <h2>Usuários</h2>
-    <p>Visualize e gerencie os usuários cadastrados.</p>
+    <p>Visualize, notifique e gerencie os usuários cadastrados.</p>
     <a href="{{ url_for('admin.users') }}" class="button-primary">Ver Usuários</a>
   </div>
   <div class="card">
@@ -21,12 +70,91 @@
     <p>Histórico completo de notificações e alertas do sistema.</p>
     <a href="{{ url_for('admin.alerts') }}" class="button-primary">Ver Alertas</a>
   </div>
-</section>
+</div>
 
 <style>
-.dashboard-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-top: 2rem; }
-.card { background: var(--bg-card); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 1rem; }
-.card h2 { font-size: 1.25rem; font-weight: 600; margin: 0; }
-.card p { margin: 0; flex-grow: 1; }
+/* ── Admin Stats Grid ─── */
+.adm-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+  margin-top: 4px;
+}
+.adm-stat-card {
+  align-items: center;
+  background: var(--white);
+  border: 1px solid var(--blue-light);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  gap: 14px;
+  padding: 18px 20px;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.adm-stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.adm-stat--live    { border-top: 3px solid var(--green); }
+.adm-stat--scheduled { border-top: 3px solid #0e82ff; }
+.adm-stat--finished  { border-top: 3px solid var(--gray-dark); }
+.adm-stat--bets    { border-top: 3px solid var(--yellow); }
+.adm-stat--users   { border-top: 3px solid var(--blue); }
+
+.adm-stat-icon { font-size: 1.8rem; }
+.adm-stat-body { display: flex; flex-direction: column; }
+.adm-stat-body span { color: var(--gray-dark); font-size: 0.82rem; font-weight: 700; }
+.adm-stat-body strong { color: var(--blue-dark); font-size: 2rem; font-weight: 800; line-height: 1.1; }
+
+/* ── Chart Section ─────── */
+.adm-chart-section { display: grid; gap: 20px; }
+.adm-chart-card {
+  background: var(--white);
+  border: 1px solid var(--blue-light);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 20px 24px;
+}
+.adm-chart-card h2 { font-size: 1.05rem; margin-bottom: 16px; color: var(--blue-dark); }
+
+/* ── Quick links ─────── */
+.dashboard-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.card { background: var(--white); padding: 1.5rem; border-radius: var(--radius); border: 1px solid var(--blue-light); display: flex; flex-direction: column; gap: 10px; box-shadow: var(--shadow-sm); }
+.card h2 { font-size: 1.1rem; font-weight: 700; margin: 0; color: var(--blue-dark); }
+.card p { margin: 0; flex-grow: 1; color: var(--gray-dark); font-size: 0.9rem; }
 </style>
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+const monthlyLabels = {{ monthly_labels | tojson }};
+const monthlyData   = {{ monthly_data | tojson }};
+
+if (document.getElementById('monthlyChart')) {
+  new Chart(document.getElementById('monthlyChart'), {
+    type: 'line',
+    data: {
+      labels: monthlyLabels.length ? monthlyLabels : ['Sem dados'],
+      datasets: [{
+        label: 'Jogos',
+        data: monthlyData.length ? monthlyData : [0],
+        borderColor: '#1A55A0',
+        backgroundColor: 'rgba(26,85,160,0.10)',
+        borderWidth: 2.5,
+        pointRadius: 5,
+        pointBackgroundColor: '#1A55A0',
+        tension: 0.35,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1 } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+</script>
+{% endblock %}
 {% endblock %}
