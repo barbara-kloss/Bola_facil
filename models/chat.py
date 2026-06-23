@@ -5,11 +5,11 @@ def _db():
 class ChatGroup:
     @staticmethod
     def create(name, created_by):
-        cursor = _db().execute(
-            "INSERT INTO chat_groups (name, created_by) VALUES (?, ?)",
+        row = _db().execute(
+            "INSERT INTO chat_groups (name, created_by) VALUES (?, ?) RETURNING id",
             (name, created_by)
-        )
-        group_id = cursor.lastrowid
+        ).fetchone()
+        group_id = row["id"]
         ChatGroupMember.add(group_id, created_by)
         _db().commit()
         return ChatGroup.get_by_id(group_id)
@@ -35,7 +35,7 @@ class ChatGroupMember:
     @staticmethod
     def add(group_id, user_id):
         _db().execute(
-            "INSERT OR IGNORE INTO chat_group_members (group_id, user_id) VALUES (?, ?)",
+            "INSERT INTO chat_group_members (group_id, user_id) VALUES (?, ?) ON CONFLICT (group_id, user_id) DO NOTHING",
             (group_id, user_id)
         )
         _db().commit()
@@ -52,21 +52,21 @@ class ChatGroupMember:
 class ChatMessage:
     @staticmethod
     def send_to_group(group_id, sender_id, text, is_bot=0):
-        cursor = _db().execute(
-            "INSERT INTO chat_messages (group_id, sender_id, text, is_bot) VALUES (?, ?, ?, ?)",
+        row = _db().execute(
+            "INSERT INTO chat_messages (group_id, sender_id, text, is_bot) VALUES (?, ?, ?, ?) RETURNING id",
             (group_id, sender_id, text, is_bot)
-        )
+        ).fetchone()
         _db().commit()
-        return cursor.lastrowid
+        return row["id"] if row else None
 
     @staticmethod
     def send_private(sender_id, recipient_id, text, is_bot=0):
-        cursor = _db().execute(
-            "INSERT INTO chat_messages (sender_id, recipient_id, text, is_bot) VALUES (?, ?, ?, ?)",
+        row = _db().execute(
+            "INSERT INTO chat_messages (sender_id, recipient_id, text, is_bot) VALUES (?, ?, ?, ?) RETURNING id",
             (sender_id, recipient_id, text, is_bot)
-        )
+        ).fetchone()
         _db().commit()
-        return cursor.lastrowid
+        return row["id"] if row else None
 
     @staticmethod
     def list_for_group(group_id):
@@ -102,7 +102,7 @@ class ChatGroupInvite:
     @staticmethod
     def add(group_id, email, invited_by):
         _db().execute(
-            "INSERT OR IGNORE INTO chat_group_invites (group_id, email, invited_by) VALUES (?, ?, ?)",
+            "INSERT INTO chat_group_invites (group_id, email, invited_by) VALUES (?, ?, ?) ON CONFLICT (group_id, email) DO NOTHING",
             (group_id, email.lower(), invited_by)
         )
         _db().commit()

@@ -7,20 +7,21 @@ def _db():
 class Bet:
     @staticmethod
     def create(user_id, game_id, predicted_home_score, predicted_away_score):
-        cursor = _db().execute(
+        row = _db().execute(
             """
             INSERT INTO bets (user_id, game_id, predicted_home_score, predicted_away_score)
             VALUES (?, ?, ?, ?)
             ON CONFLICT(user_id, game_id) DO UPDATE SET
-                predicted_home_score = excluded.predicted_home_score,
-                predicted_away_score = excluded.predicted_away_score,
-                updated_at = CURRENT_TIMESTAMP
+                predicted_home_score = EXCLUDED.predicted_home_score,
+                predicted_away_score = EXCLUDED.predicted_away_score,
+                updated_at = NOW()
+            RETURNING id
             """,
             (user_id, game_id, predicted_home_score, predicted_away_score),
-        )
+        ).fetchone()
         _db().commit()
-        if cursor.lastrowid:
-            return Bet.get_by_id(cursor.lastrowid)
+        if row:
+            return Bet.get_by_id(row["id"])
         return Bet.get_by_user_and_game(user_id, game_id)
 
     @staticmethod
@@ -48,12 +49,12 @@ class Bet:
         if clauses:
             query += " WHERE " + " AND ".join(clauses)
         query += " ORDER BY created_at DESC"
-        return _db().execute(query, values).fetchall()
+        return _db().execute(query, tuple(values)).fetchall()
 
     @staticmethod
     def update_points(bet_id, points_earned):
         _db().execute(
-            "UPDATE bets SET points_earned = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            "UPDATE bets SET points_earned = ?, updated_at = NOW() WHERE id = ?",
             (points_earned, bet_id),
         )
         _db().commit()

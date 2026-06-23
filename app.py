@@ -1,5 +1,6 @@
 import os
-import sqlite3
+import psycopg2
+import psycopg2.extras
 from pathlib import Path
 
 from flask import Flask, flash, g, jsonify, redirect, render_template, request, url_for
@@ -31,14 +32,89 @@ login_manager.login_view = "auth.login"
 login_manager.login_message = "Faça login para continuar."
 
 
+class _PgWrapper:
+    """Wrapper sobre psycopg2 que imita a interface do sqlite3 (execute/fetchone/fetchall/commit)."""
+    def __init__(self, conn):
+        self._conn = conn
+
+    def execute(self, sql, params=()):
+        cur = self._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        # Converte placeholders ? do SQLite para %s do PostgreSQL
+        sql = sql.replace("?", "%s")
+        cur.execute(sql, params)
+        return _PgCursor(cur)
+
+    def executescript(self, sql):
+        cur = self._conn.cursor()
+        cur.execute(sql)
+
+    def commit(self):
+        self._conn.commit()
+
+    def close(self):
+        self._conn.close()
+
+
+class _PgCursor:
+    """Cursor wrapper que imita sqlite3.Cursor e retorna RealDictRow compatível com row['col']."""
+    def __init__(self, cur):
+        self._cur = cur
+
+    def fetchone(self):
+        row = self._cur.fetchone()
+        return _PgRow(row) if row else None
+
+    def fetchall(self):
+        return [_PgRow(r) for r in self._cur.fetchall()]
+
+    @property
+    def lastrowid(self):
+        # psycopg2 não tem lastrowid — usamos RETURNING id nas queries
+        try:
+            row = self._cur.fetchone()
+            if row:
+                return row.get("id") or row.get(list(row.keys())[0])
+        except Exception:
+            pass
+        return None
+
+    def __iter__(self):
+        return iter(self.fetchall())
+
+
+class _PgRow:
+    """Imita sqlite3.Row: acesso por nome (row['col']) e por índice (row[0])."""
+    def __init__(self, data):
+        self._data = dict(data) if data else {}
+        self._keys = list(self._data.keys())
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self._data[self._keys[key]]
+        return self._data[key]
+
+    def get(self, key, default=None):
+        return self._data.get(key, default)
+
+    def keys(self):
+        return self._keys
+
+    def __contains__(self, key):
+        return key in self._data
+
+    def __iter__(self):
+        return iter(self._data.values())
+
+    def __repr__(self):
+        return repr(self._data)
+
+
 def get_db():
     if "db" not in g:
         database_url = current_app_config()["DATABASE_URL"]
-        database_path = Path(database_url)
-        database_path.parent.mkdir(parents=True, exist_ok=True)
-        g.db = sqlite3.connect(database_path)
-        g.db.row_factory = sqlite3.Row
-        g.db.execute("PRAGMA foreign_keys = ON")
+        conn = psycopg2.connect(database_url)
+        conn.autocommit = False
+        g.db = _PgWrapper(conn)
     return g.db
 
 
@@ -49,111 +125,24 @@ def current_app_config():
 
 
 def init_database(app):
-    database_path = Path(app.config["DATABASE_URL"])
-    database_path.parent.mkdir(parents=True, exist_ok=True)
-    schema_path = Path(app.root_path) / "database" / "schema.sql"
+    """Cria as tabelas no Supabase/PostgreSQL se ainda não existirem."""
+    database_url = app.config["DATABASE_URL"]
+    schema_path = Path(app.root_path) / "database" / "schema_pg.sql"
 
-    with sqlite3.connect(database_path) as connection:
-        connection.row_factory = sqlite3.Row
-        connection.execute("PRAGMA foreign_keys = ON")
-        has_users = connection.execute(
-            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'users'"
-        ).fetchone()
+    try:
+        conn = psycopg2.connect(database_url)
+        conn.autocommit = True
+        cur = conn.cursor()
+        cur.execute("SELECT to_regclass('public.users')")
+        has_users = cur.fetchone()[0]
         if not has_users:
-            connection.executescript(schema_path.read_text(encoding="utf-8"))
-            connection.commit()
-        ensure_schema_updates(connection)
-
-
-def ensure_schema_updates(connection):
-    # --- users table columns ---
-    user_columns = {
-        row["name"]
-        for row in connection.execute("PRAGMA table_info(users)").fetchall()
-    }
-    user_additions = {
-        "role": "ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'",
-        "notifications_enabled": "ALTER TABLE users ADD COLUMN notifications_enabled INTEGER NOT NULL DEFAULT 1",
-        "notification_prefs": "ALTER TABLE users ADD COLUMN notification_prefs TEXT",
-        "reset_token": "ALTER TABLE users ADD COLUMN reset_token TEXT",
-        "reset_token_expires_at": "ALTER TABLE users ADD COLUMN reset_token_expires_at TEXT",
-    }
-    for column, statement in user_additions.items():
-        if column not in user_columns:
-            connection.execute(statement)
-
-    # --- games table columns ---
-    columns = {
-        row["name"]
-        for row in connection.execute("PRAGMA table_info(games)").fetchall()
-    }
-    additions = {
-        "external_match_id": "ALTER TABLE games ADD COLUMN external_match_id INTEGER",
-        "competition_code": "ALTER TABLE games ADD COLUMN competition_code TEXT",
-        "competition_name": "ALTER TABLE games ADD COLUMN competition_name TEXT",
-        "matchday": "ALTER TABLE games ADD COLUMN matchday INTEGER",
-        "home_crest": "ALTER TABLE games ADD COLUMN home_crest TEXT",
-        "away_crest": "ALTER TABLE games ADD COLUMN away_crest TEXT",
-        "api_status": "ALTER TABLE games ADD COLUMN api_status TEXT",
-        "last_synced_at": "ALTER TABLE games ADD COLUMN last_synced_at TEXT",
-    }
-    for column, statement in additions.items():
-        if column not in columns:
-            connection.execute(statement)
-
-    # --- indexes ---
-    indexes = [
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_games_external_match_id ON games(external_match_id)",
-        "CREATE INDEX IF NOT EXISTS idx_games_competition_code ON games(competition_code)",
-    ]
-    for statement in indexes:
-        connection.execute(statement)
-
-    # --- new tables (chat + notifications) ---
-    connection.executescript("""
-        CREATE TABLE IF NOT EXISTS chat_groups (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            created_by INTEGER NOT NULL,
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
-        );
-        CREATE TABLE IF NOT EXISTS chat_group_members (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            group_id INTEGER NOT NULL,
-            user_id INTEGER NOT NULL,
-            joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (group_id) REFERENCES chat_groups(id) ON DELETE CASCADE,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-            UNIQUE (group_id, user_id)
-        );
-        CREATE TABLE IF NOT EXISTS chat_messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            group_id INTEGER,
-            sender_id INTEGER NOT NULL DEFAULT 0,
-            recipient_id INTEGER,
-            text TEXT NOT NULL,
-            is_bot INTEGER NOT NULL DEFAULT 0,
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (group_id) REFERENCES chat_groups(id) ON DELETE CASCADE
-        );
-        CREATE TABLE IF NOT EXISTS notifications (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            type TEXT NOT NULL,
-            title TEXT NOT NULL,
-            body TEXT,
-            read INTEGER NOT NULL DEFAULT 0,
-            extra_data TEXT,
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
-        CREATE INDEX IF NOT EXISTS idx_chat_messages_group ON chat_messages(group_id);
-        CREATE INDEX IF NOT EXISTS idx_chat_messages_recipient ON chat_messages(recipient_id);
-    """)
-
-    connection.commit()
+            cur.execute(schema_path.read_text(encoding="utf-8"))
+        cur.close()
+        conn.close()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Erro ao inicializar banco de dados: {e}")
+        raise
 
 
 def create_app(config_object=None):
@@ -242,7 +231,7 @@ def create_app(config_object=None):
 
         if request.accept_mimetypes.best == "application/json":
             return jsonify({"message": "Jogos sincronizados.", "count": len(synced_games)})
-        flash(f"{len(synced_games)} jogos sincronizados com a football-data.org.", "success")
+        flash(f"{len(synced_games)} jogos sincronizados com a API-Sports.", "success")
         return redirect(url_for("games.list_games"))
 
     @app.errorhandler(403)
@@ -271,6 +260,7 @@ def load_user(user_id):
     return User.get_by_id(user_id)
 
 
+app = create_app()
+
 if __name__ == "__main__":
-    app = create_app()
     socketio.run(app, debug=os.environ.get("FLASK_DEBUG", "1") == "1", allow_unsafe_werkzeug=True)

@@ -59,15 +59,16 @@ class User(UserMixin):
         role = "admin" if count == 0 else "user"
         
         password_hash = generate_password_hash(password)
-        cursor = _db().execute(
+        row = _db().execute(
             """
             INSERT INTO users (name, email, whatsapp_phone, password_hash, role)
             VALUES (?, ?, ?, ?, ?)
+            RETURNING id
             """,
             (name, email.lower(), whatsapp_phone, password_hash, role),
-        )
+        ).fetchone()
         _db().commit()
-        return User.get_by_id(cursor.lastrowid)
+        return User.get_by_id(row["id"])
 
     @staticmethod
     def set_notification_preference(user_id, enabled):
@@ -165,11 +166,11 @@ class User(UserMixin):
 class Pool:
     @staticmethod
     def create(name, created_by, description=None):
-        cursor = _db().execute(
-            "INSERT INTO pools (name, description, created_by) VALUES (?, ?, ?)",
+        row = _db().execute(
+            "INSERT INTO pools (name, description, created_by) VALUES (?, ?, ?) RETURNING id",
             (name, description, created_by),
-        )
-        pool_id = cursor.lastrowid
+        ).fetchone()
+        pool_id = row["id"]
         _db().execute(
             "INSERT INTO pool_members (pool_id, user_id, role) VALUES (?, ?, 'admin')",
             (pool_id, created_by),
@@ -212,8 +213,9 @@ class PoolMember:
     def add(pool_id, user_id, role="member"):
         _db().execute(
             """
-            INSERT OR IGNORE INTO pool_members (pool_id, user_id, role)
+            INSERT INTO pool_members (pool_id, user_id, role)
             VALUES (?, ?, ?)
+            ON CONFLICT (pool_id, user_id) DO NOTHING
             """,
             (pool_id, user_id, role),
         )

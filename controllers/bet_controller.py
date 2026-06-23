@@ -28,7 +28,12 @@ def bet_game(game_id):
 
     lockout_minutes = current_app.config.get("BET_LOCKOUT_MINUTES", 30)
     try:
-        match_time = datetime.fromisoformat(game["match_datetime"].replace('Z', '+00:00'))
+        match_dt = game["match_datetime"]
+        if isinstance(match_dt, str):
+            match_time = datetime.fromisoformat(match_dt.replace('Z', '+00:00'))
+        else:
+            match_time = match_dt
+            
         if match_time.tzinfo:
             now = datetime.now(match_time.tzinfo)
         else:

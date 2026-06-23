@@ -1,5 +1,281 @@
 {% extends "base.html" %}
 {% block title %}Detalhe do jogo - {{ brand_name }}{% endblock %}
+{% block styles %}
+<style>
+/* Escalações & Campinho Styles */
+.lineup-section {
+  margin: 2rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.lineup-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  color: var(--text-color, #333);
+  text-align: center;
+}
+
+.pitch-container {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  height: 620px;
+  background: radial-gradient(circle, #2e7d32 30%, #1b5e20 100%);
+  border: 3px solid rgba(255, 255, 255, 0.8);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  margin-bottom: 2rem;
+}
+
+/* Field lines */
+.pitch-half-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translateY(-50%);
+}
+
+.pitch-center-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100px;
+  height: 100px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.pitch-center-spot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.pitch-penalty-area-top {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 220px;
+  height: 80px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-top: none;
+  transform: translateX(-50%);
+}
+
+.pitch-penalty-area-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 220px;
+  height: 80px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-bottom: none;
+  transform: translateX(-50%);
+}
+
+.pitch-goal-area-top {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 100px;
+  height: 30px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-top: none;
+  transform: translateX(-50%);
+}
+
+.pitch-goal-area-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 100px;
+  height: 30px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-bottom: none;
+  transform: translateX(-50%);
+}
+
+/* Players on the pitch */
+.player-node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  width: 70px;
+}
+
+.player-photo-wrapper {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: #f0f0f0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.player-photo-wrapper:hover {
+  transform: scale(1.2);
+}
+
+.player-photo {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.player-number {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 0.6rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  padding: 1px;
+}
+
+.player-name {
+  margin-top: 3px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9), -1px -1px 3px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+/* Formations & Coaches info */
+.lineup-summary {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  background: #ffffff;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.lineup-summary-team {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.lineup-summary-team.away {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.lineup-summary-team strong {
+  font-size: 1.1rem;
+  color: #10b981;
+}
+
+.lineup-summary-team .formation {
+  font-size: 0.9rem;
+  color: #4a5568;
+  font-weight: 600;
+}
+
+.lineup-summary-team .coach {
+  font-size: 0.85rem;
+  color: #718096;
+}
+
+/* Substitutes layout */
+.lineup-additional-info {
+  width: 100%;
+  max-width: 600px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+@media (max-width: 480px) {
+  .lineup-additional-info {
+    grid-template-columns: 1fr;
+  }
+}
+
+.team-sub-col h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: #1a202c;
+  border-bottom: 2px solid #edf2f7;
+  padding-bottom: 0.4rem;
+}
+
+.sub-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sub-player {
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #4a5568;
+}
+
+.sub-number {
+  display: inline-block;
+  min-width: 20px;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #edf2f7;
+  color: #2d3748;
+  padding: 1px 4px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e0;
+}
+</style>
+{% endblock %}
 {% block content %}
 <section class="content-head">
   <a href="javascript:history.back()" class="back-link">
@@ -59,6 +335,106 @@
   <button type="submit">Lançar resultado</button>
 </form>
 {% endif %}
+
+<section class="lineup-section">
+  <h2 class="lineup-title">Escalações</h2>
+  {% if lineups %}
+    <div class="lineup-summary">
+      <div class="lineup-summary-team home">
+        <strong>{{ lineups.home.team.name }}</strong>
+        <span class="formation">Esquema: {{ lineups.home.formation or "N/A" }}</span>
+        {% if lineups.home.coach.name %}
+          <span class="coach">Técnico: {{ lineups.home.coach.name }}</span>
+        {% endif %}
+      </div>
+      <div class="lineup-summary-team away">
+        <strong>{{ lineups.away.team.name }}</strong>
+        <span class="formation">Esquema: {{ lineups.away.formation or "N/A" }}</span>
+        {% if lineups.away.coach.name %}
+          <span class="coach">Técnico: {{ lineups.away.coach.name }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="pitch-container">
+      <div class="pitch-half-line"></div>
+      <div class="pitch-center-circle"></div>
+      <div class="pitch-center-spot"></div>
+      <div class="pitch-penalty-area-top"></div>
+      <div class="pitch-penalty-area-bottom"></div>
+      <div class="pitch-goal-area-top"></div>
+      <div class="pitch-goal-area-bottom"></div>
+      
+      <!-- Home Team Players -->
+      {% for p in lineups.home.players %}
+        {% set colors = (lineups.home.team.get('colors', {}) or {}).get('goalkeeper' if p.pos == 'G' else 'player') or {} %}
+        {% set p_color = colors.get('primary', '10b981') %}
+        {% set n_color = colors.get('number', 'ffffff') %}
+        {% set b_color = colors.get('border', 'ffffff') %}
+        <div class="player-node" style="{{ p.style }}">
+          <div class="player-photo-wrapper" style="border-color: #{{ b_color }}; box-shadow: 0 0 8px #{{ p_color }}">
+            <img class="player-photo" src="https://images.weserv.nl/?url=media.api-sports.io/football/players/{{ p.id }}.png" onerror="if(this.src.indexOf('media.api-sports.io') !== -1) { this.src = 'https://images.weserv.nl/?url=media.api-football.com/football/players/{{ p.id }}.png'; } else { this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'%23a0aec0\'><circle cx=\'12\' cy=\'8\' r=\'4\'/><path d=\'M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z\'/></svg>'; }">
+            <span class="player-number" style="background-color: #{{ p_color }}; color: #{{ n_color }}; border-color: #{{ b_color }}">{{ p.number }}</span>
+          </div>
+          <span class="player-name">{{ p.name }}</span>
+        </div>
+      {% endfor %}
+
+      <!-- Away Team Players -->
+      {% for p in lineups.away.players %}
+        {% set colors = (lineups.away.team.get('colors', {}) or {}).get('goalkeeper' if p.pos == 'G' else 'player') or {} %}
+        {% set p_color = colors.get('primary', '3b82f6') %}
+        {% set n_color = colors.get('number', 'ffffff') %}
+        {% set b_color = colors.get('border', 'ffffff') %}
+        <div class="player-node" style="{{ p.style }}">
+          <div class="player-photo-wrapper" style="border-color: #{{ b_color }}; box-shadow: 0 0 8px #{{ p_color }}">
+            <img class="player-photo" src="https://images.weserv.nl/?url=media.api-sports.io/football/players/{{ p.id }}.png" onerror="if(this.src.indexOf('media.api-sports.io') !== -1) { this.src = 'https://images.weserv.nl/?url=media.api-football.com/football/players/{{ p.id }}.png'; } else { this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'%23a0aec0\'><circle cx=\'12\' cy=\'8\' r=\'4\'/><path d=\'M12 14c-6.1 0-8 4-8 4v2h16v-2s-1.9-4-8-4z\'/></svg>'; }">
+            <span class="player-number" style="background-color: #{{ p_color }}; color: #{{ n_color }}; border-color: #{{ b_color }}">{{ p.number }}</span>
+          </div>
+          <span class="player-name">{{ p.name }}</span>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="lineup-additional-info">
+      <div class="team-sub-col">
+        <h3>Reservas ({{ lineups.home.team.name }})</h3>
+        <div class="sub-list">
+          {% for p in lineups.home.substitutes %}
+            <span class="sub-player"><span class="sub-number">{{ p.number }}</span> {{ p.name }} ({{ p.pos }})</span>
+          {% else %}
+            <span class="sub-player">Nenhum reserva listado.</span>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="team-sub-col">
+        <h3>Reservas ({{ lineups.away.team.name }})</h3>
+        <div class="sub-list">
+          {% for p in lineups.away.substitutes %}
+            <span class="sub-player"><span class="sub-number">{{ p.number }}</span> {{ p.name }} ({{ p.pos }})</span>
+          {% else %}
+            <span class="sub-player">Nenhum reserva listado.</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <div class="lineup-summary" style="justify-content: center; text-align: center; padding: 2.5rem 1rem; width: 100%; max-width: 600px; margin-bottom: 2rem;">
+      <div style="color: #a3a3a3; font-size: 0.95rem; line-height: 1.6; width: 100%;">
+        {% if game.status == 'scheduled' %}
+          <svg width="36" height="36" fill="currentColor" viewBox="0 0 16 16" style="margin-bottom: 0.75rem; color: #10b981; display: inline-block;"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/></svg>
+          <p style="margin: 0; font-weight: 600; color: #f5f5f5;">Escalação Pré-jogo Indisponível</p>
+          <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #a3a3a3;">As escalações oficiais serão divulgadas automaticamente cerca de 1 hora antes do início da partida.</p>
+        {% else %}
+          <svg width="36" height="36" fill="currentColor" viewBox="0 0 16 16" style="margin-bottom: 0.75rem; color: #ef4444; display: inline-block;"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M7.002 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0zM7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995z"/></svg>
+          <p style="margin: 0; font-weight: 600; color: #f5f5f5;">Sem Dados de Escalação</p>
+          <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #a3a3a3;">As escalações para esta partida não foram disponibilizadas pelo provedor de dados.</p>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+</section>
+
 <section class="table-shell">
   <h2>Palpites</h2>
   <table>
