@@ -10,25 +10,32 @@
   </div>
 </section>
 
-<!-- Barra de Filtros -->
-<div class="filter-bar" id="filter-bar">
-  <div class="filter-search-wrap">
-    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--gray-dark);flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <input type="text" id="filter-search" placeholder="Buscar time..." class="filter-search-input">
-  </div>
-  <div class="filter-chips" id="filter-chips">
-    <button class="filter-chip active" data-comp="">Todos</button>
-    <!-- chips gerados via JS -->
-  </div>
-  <div class="filter-status-wrap">
-    <select id="filter-status" class="filter-status-select">
-      <option value="">Todos os status</option>
-      <option value="scheduled">Agendados</option>
-      <option value="live">Ao Vivo</option>
-      <option value="finished">Finalizados</option>
+{# ── Filtros ── #}
+<form method="get" action="{{ url_for('games.list_games') }}" class="filters-bar" id="filters-form">
+  <div class="filter-group">
+    <label for="filter-campeonato">Campeonato</label>
+    <select id="filter-campeonato" name="campeonato" onchange="this.form.submit()">
+      <option value="">Todos</option>
+      {% set seen_competitions = [] %}
+      {% for game in all_games_for_filter %}
+        {% if game.competition_name and game.competition_name not in seen_competitions %}
+          {% set _ = seen_competitions.append(game.competition_name) %}
+          <option value="{{ game.competition_name }}" {% if active_campeonato == game.competition_name %}selected{% endif %}>
+            {{ game.competition_name }}
+          </option>
+        {% endif %}
+      {% endfor %}
     </select>
   </div>
-</div>
+  <div class="filter-group">
+    <label for="filter-time">Time</label>
+    <input id="filter-time" name="time" type="text" placeholder="Nome do time..." value="{{ active_time or '' }}">
+  </div>
+  <button type="submit" class="button-primary filter-submit-btn">Filtrar</button>
+  {% if active_campeonato or active_time %}
+  <a href="{{ url_for('games.list_games') }}" class="button-secondary">Limpar</a>
+  {% endif %}
+</form>
 
 <section class="games-layout{% if not current_user.is_admin %} games-layout--full{% endif %}">
   <div class="table-section">
@@ -49,7 +56,7 @@
           data-status="{{ game.status }}">
           <div class="match-date">
             {% if game.status == "finished" %}
-              <span class="status-pill status-finished">FINALIZADO</span>
+              <span class="status-pill status-finished">Finalizado</span>
             {% else %}
               <span>{{ match_time.date }}</span>
               <span>{{ match_time.time }}</span>
@@ -69,9 +76,16 @@
               </span>
             </div>
             {% if game.competition_name or game.matchday %}
-            <span class="match-meta comp-tag" data-comp="{{ comp_key }}">
-              {% if game.competition_name %}{{ game.competition_name }}{% endif %}{% if game.matchday %} &bull; Rodada {{ game.matchday }}{% endif %}
-            </span>
+            <div class="match-meta-row">
+              {% if game.competition_name %}
+                <a href="{{ url_for('games.list_games', campeonato=game.competition_name) }}" class="competition-badge">
+                  {{ game.competition_name }}
+                </a>
+              {% endif %}
+              {% if game.matchday %}
+                <span class="matchday-label">Rodada {{ game.matchday }}</span>
+              {% endif %}
+            </div>
             {% endif %}
           </div>
           <div class="match-score">
@@ -89,13 +103,13 @@
           </div>
         </article>
       {% else %}
-        <div class="empty-state">Nenhum jogo cadastrado ainda.</div>
+        <div class="empty-state">Nenhum jogo encontrado{% if active_campeonato or active_time %} com os filtros selecionados{% endif %}.</div>
       {% endfor %}
       <div class="empty-state" id="no-results" style="display:none;">Nenhum jogo encontrado com esses filtros.</div>
     </div>
 
     {% if total_pages > 1 %}
-      {% set pagination_url = url_for('games.list_games') %}
+      {% set pagination_url = url_for('games.list_games', campeonato=active_campeonato or '', time=active_time or '') %}
       <div class="pagination-wrapper">
         {% include 'components/pagination.html' %}
       </div>

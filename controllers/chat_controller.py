@@ -2,8 +2,11 @@ from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
 from models.chat import ChatGroup, ChatGroupMember, ChatMessage
 from models.user import User
+from models.game import Game
+from models.score import Score
 from models.notification import Notification
 from utils.messages import ApiMessages
+import re
 
 chat_bp = Blueprint("chat", __name__)
 
@@ -23,10 +26,45 @@ def send_bot_message():
     
     ChatMessage.send_private(current_user.id, 0, text, is_bot=0)
     
-    bot_reply = _generate_bot_reply(text, current_user)
+    # Processa intenções do bot
+    lower_text = text.lower()
+    bot_reply = "Desculpe, não entendi. Você pode perguntar sobre 'próximos jogos', seu 'ranking', 'palpites' ou 'regras'."
+    
+    if re.search(r'\b(ajuda|regras|como funciona)\b', lower_text):
+        bot_reply = "O Bola Fácil é um bolão de futebol! Você ganha 10 pts acertando o placar exato, 5 pts acertando vencedor+gols, 3 pts acertando só o vencedor, e 2 pts acertando um empate (com gols diferentes)."
+    
+    elif re.search(r'\b(ranking|pontos|minha posi|classificação)\b', lower_text):
+        from models.user import Pool
+        pool = Pool.get_default()
+        if pool:
+            ranking = Score.get_ranking(pool["id"])
+            user_rank = next((r for r in ranking if r["user_id"] == current_user.id), None)
+            if user_rank:
+                bot_reply = f"Você está com {user_rank['total_points']} pontos no ranking atual!"
+            else:
+                bot_reply = "Você ainda não pontuou no bolão principal."
+        else:
+            bot_reply = "Não encontrei o bolão principal para verificar seu ranking."
+            
+    elif re.search(r'\b(jogos|próximos|hoje)\b', lower_text):
+        from models.user import Pool
+        pool = Pool.get_default()
+        games = Game.list(pool["id"]) if pool else []
+        upcoming = [g for g in games if g["status"] == "scheduled"]
+        if upcoming:
+            g = upcoming[0]
+            from utils.helpers import format_match_time
+            time = format_match_time(g["match_datetime"])
+            bot_reply = f"O próximo jogo é {g['home_team']} x {g['away_team']} no dia {time['date']} às {time['time']}."
+        else:
+            bot_reply = "Não há jogos agendados no momento."
+            
+    elif re.search(r'\b(palpite|palpitar|aposta)\b', lower_text):
+        bot_reply = "Para palpitar, acesse a página de Jogos, escolha uma partida que ainda não começou e clique em 'Palpitar'. Boa sorte!"
+    
     ChatMessage.send_private(0, current_user.id, bot_reply, is_bot=1)
     
-    return jsonify({"success": True})
+    return jsonify({"success": True, "reply": bot_reply})
 
 
 def _generate_bot_reply(text: str, user) -> str:

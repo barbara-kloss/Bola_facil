@@ -284,19 +284,39 @@
   </a>
   <h1>{{ game.home_team }} x {{ game.away_team }}</h1>
   {% set match_time = format_match_time(game.match_datetime) %}
-  <p>Rodada {{ game.matchday or "-" }} · {{ match_time.date }} {{ match_time.time }} · {{ match_status_label(game.status, game.api_status) }}</p>
+  <div style="display:flex; flex-wrap:wrap; align-items:center; gap:0.5rem; margin-top:0.25rem;">
+    {% if game.competition_name %}
+      <a href="{{ url_for('games.list_games', campeonato=game.competition_name) }}" class="competition-badge-detail">{{ game.competition_name }}</a>
+    {% endif %}
+    <span style="opacity:0.7; font-size:0.9rem;">Rodada {{ game.matchday or "-" }} &middot; {{ match_time.date }} {{ match_time.time }} &middot; {{ match_status_label(game.status, game.api_status) }}</span>
+  </div>
 </section>
+<style>
+.competition-badge-detail {
+  display: inline-block;
+  padding: 0.2rem 0.7rem;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  background: var(--primary-color, #6c63ff);
+  color: #fff;
+  transition: opacity 0.2s;
+}
+.competition-badge-detail:hover { opacity: 0.8; }
+</style>
 <section class="match-board">
   <div class="team-score">
     {% if game.home_crest %}<img src="{{ game.home_crest }}" alt="">{% endif %}
     <strong>{{ game.home_team }}</strong>
-    <div class="score-box">{{ game.home_score if game.home_score is not none else "-" }}</div>
+    <div class="score-box" id="home-score-box">{{ game.home_score if game.home_score is not none else "-" }}</div>
   </div>
-  <span>Final</span>
+  <span id="match-status-badge">Final</span>
   <div class="team-score">
     {% if game.away_crest %}<img src="{{ game.away_crest }}" alt="">{% endif %}
     <strong>{{ game.away_team }}</strong>
-    <div class="score-box">{{ game.away_score if game.away_score is not none else "-" }}</div>
+    <div class="score-box" id="away-score-box">{{ game.away_score if game.away_score is not none else "-" }}</div>
   </div>
 </section>
 {% if current_user.is_admin %}
@@ -419,7 +439,7 @@
   <h2>Palpites</h2>
   <table>
     <thead><tr><th>Jogador</th><th>Palpite</th><th>Pontos</th></tr></thead>
-    <tbody>
+    <tbody id="bets-tbody">
       {% for bet in bets %}
         <tr><td>{{ bet.name }}</td><td>{{ bet.predicted_home_score }} x {{ bet.predicted_away_score }}</td><td>{{ bet.points_earned }}</td></tr>
       {% else %}
@@ -428,4 +448,45 @@
     </tbody>
   </table>
 </section>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+  const socket = io();
+  const gameId = {{ game.id }};
+  
+  socket.on('connect', () => {
+    socket.emit('join_game', { game_id: gameId });
+  });
+
+  socket.on('game_result_updated', (data) => {
+    if (data.game_id !== gameId) return;
+
+    // Atualiza placar
+    document.getElementById('home-score-box').textContent = data.home_score;
+    document.getElementById('away-score-box').textContent = data.away_score;
+    
+    // Atualiza status se não era 'finished'
+    const statusBadge = document.getElementById('match-status-badge');
+    if (statusBadge) statusBadge.textContent = 'Finalizado';
+
+    // Atualiza tabela de palpites
+    const tbody = document.getElementById('bets-tbody');
+    if (data.bets && data.bets.length > 0) {
+      tbody.innerHTML = data.bets.map(bet => `
+        <tr>
+          <td>${bet.name}</td>
+          <td>${bet.predicted_home_score} x ${bet.predicted_away_score}</td>
+          <td>${bet.points_earned !== null ? bet.points_earned : '-'}</td>
+        </tr>
+      `).join('');
+    } else {
+      tbody.innerHTML = '<tr><td colspan="3">Nenhum palpite registrado.</td></tr>';
+    }
+
+    if (typeof Toast !== 'undefined') {
+      Toast.success('Resultado do jogo atualizado em tempo real!');
+    }
+  });
+</script>
 {% endblock %}

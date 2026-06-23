@@ -29,22 +29,16 @@
         <td style="padding: 1rem;">{{ u.created_at }}</td>
         <td style="padding: 1rem;">
           {% if u.id|string != current_user.id|string %}
-          <div class="action-menu-wrap" style="position:relative; display:inline-block;">
-            <button class="button-secondary action-menu-btn" data-user-id="{{ u.id }}" data-user-name="{{ u.name }}" data-is-admin="{{ 'true' if u.is_admin else 'false' }}" style="padding: 7px 14px; font-size: 0.85rem;">
-              Ações ▾
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <button class="button-secondary toggle-role-btn" data-user-id="{{ u.id }}" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">
+              {{ 'Remover Admin' if u.is_admin else 'Tornar Admin' }}
             </button>
-            <div class="action-menu-dropdown" style="display:none; position:absolute; right:0; top:100%; background:var(--white); border:1px solid var(--blue-light); border-radius:var(--radius); box-shadow:var(--shadow-md); min-width:190px; z-index:100; overflow:hidden;">
-              <button class="action-item action-notif" data-user-id="{{ u.id }}" data-user-name="{{ u.name }}" type="button">
-                🔔 Enviar Notificação
-              </button>
-              <button class="action-item action-toggle-role" data-user-id="{{ u.id }}" data-is-admin="{{ 'true' if u.is_admin else 'false' }}" type="button">
-                {% if u.is_admin %}👑 Remover Admin{% else %}👑 Tornar Admin{% endif %}
-              </button>
-              <div style="border-top:1px solid var(--blue-light); margin:2px 0;"></div>
-              <button class="action-item action-delete" data-user-id="{{ u.id }}" data-user-name="{{ u.name }}" type="button" style="color: #ef4444;">
-                🗑️ Excluir Usuário
-              </button>
-            </div>
+            <button class="button-secondary notify-user-btn" data-user-id="{{ u.id }}" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" title="Enviar Notificação">
+              Notificar
+            </button>
+            <button class="button-secondary delete-user-btn" data-user-id="{{ u.id }}" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; border-color: #fca5a5; color: #dc2626;" title="Excluir Usuário">
+              Excluir
+            </button>
           </div>
           {% else %}
           <span style="color: var(--text-color-muted); font-size: 0.85rem;">Você</span>
@@ -58,49 +52,26 @@
   </table>
 </section>
 
-<!-- Modal de Notificação -->
-<div class="modal-overlay" id="notif-modal">
+<!-- Modal Notificar -->
+<div class="modal-overlay" id="notify-modal">
   <div class="custom-modal">
     <div class="modal-header">
       <h3>Enviar Notificação</h3>
-      <button class="modal-close-btn" onclick="closeNotifModal()">&times;</button>
+      <button class="modal-close-btn" onclick="document.getElementById('notify-modal').classList.remove('active')">&times;</button>
     </div>
     <div class="modal-body">
-      <p>Enviando para: <strong id="notif-user-name"></strong></p>
-      <div class="form-group" style="margin-bottom:12px;">
-        <label for="notif-title">Título</label>
-        <input type="text" id="notif-title" placeholder="Ex: Lembrete de palpite" maxlength="100">
-      </div>
       <div class="form-group">
-        <label for="notif-body">Mensagem</label>
-        <textarea id="notif-body" placeholder="Escreva a mensagem..." rows="3"></textarea>
+        <label for="notify-message">Mensagem:</label>
+        <textarea id="notify-message" rows="4" style="width: 100%; border-radius: 6px; padding: 0.5rem;"></textarea>
       </div>
+      <input type="hidden" id="notify-user-id">
     </div>
     <div class="modal-footer">
-      <button class="button-secondary" onclick="closeNotifModal()">Cancelar</button>
-      <button class="button-primary" id="notif-send-btn" onclick="sendNotification()">Enviar</button>
+      <button class="button-secondary" onclick="document.getElementById('notify-modal').classList.remove('active')">Cancelar</button>
+      <button class="button-primary" id="send-notify-btn">Enviar</button>
     </div>
   </div>
 </div>
-
-<style>
-.action-item {
-  display: block;
-  width: 100%;
-  text-align: left;
-  background: none;
-  border: none;
-  padding: 10px 16px;
-  font: inherit;
-  font-size: 0.88rem;
-  font-weight: 600;
-  cursor: pointer;
-  color: var(--ink);
-  border-radius: 0;
-  transition: background 0.12s;
-}
-.action-item:hover { background: var(--gray-light); }
-</style>
 
 <script>
 // --- Formatação de telefone ---
@@ -202,6 +173,68 @@ document.querySelectorAll('.action-delete').forEach(btn => {
         if (res.ok) { Toast.success('Usuário excluído.'); window.location.reload(); }
         else { Toast.error(data.error || 'Erro ao excluir.'); }
       } catch(e) { Toast.error('Erro de conexão.'); }
+    });
+  });
+});
+
+// Ações de Notificar
+document.querySelectorAll('.notify-user-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.getElementById('notify-user-id').value = this.getAttribute('data-user-id');
+    document.getElementById('notify-message').value = '';
+    document.getElementById('notify-modal').classList.add('active');
+  });
+});
+
+document.getElementById('send-notify-btn').addEventListener('click', async function() {
+  const userId = document.getElementById('notify-user-id').value;
+  const message = document.getElementById('notify-message').value;
+  
+  if(!message.trim()) return Toast.error('Digite uma mensagem.');
+  
+  this.disabled = true;
+  this.textContent = 'Enviando...';
+  
+  try {
+    const res = await fetch(`/admin/users/${userId}/notify`, { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    });
+    const data = await res.json();
+    
+    if (res.ok) {
+      Toast.success(data.message);
+      document.getElementById('notify-modal').classList.remove('active');
+    } else {
+      Toast.error(data.error || 'Erro ao enviar notificação.');
+    }
+  } catch(err) {
+    Toast.error('Erro de conexão.');
+  } finally {
+    this.disabled = false;
+    this.textContent = 'Enviar';
+  }
+});
+
+// Ação de Excluir Usuário
+document.querySelectorAll('.delete-user-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const userId = this.getAttribute('data-user-id');
+    showConfirmModal('Atenção! Esta ação excluirá permanentemente o usuário, seus palpites, pontos e todas as informações relacionadas. Tem certeza que deseja continuar?', async () => {
+      try {
+        const res = await fetch(`/admin/users/${userId}`, { method: 'DELETE' });
+        const data = await res.json();
+        
+        if (res.ok) {
+          Toast.success(data.message);
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          Toast.error(data.error || 'Erro ao excluir usuário.');
+        }
+      } catch(err) {
+        Toast.error('Erro de conexão.');
+      }
     });
   });
 });
