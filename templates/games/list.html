@@ -9,6 +9,33 @@
   {% endif %}
 </section>
 
+{# ── Filtros ── #}
+<form method="get" action="{{ url_for('games.list_games') }}" class="filters-bar" id="filters-form">
+  <div class="filter-group">
+    <label for="filter-campeonato">Campeonato</label>
+    <select id="filter-campeonato" name="campeonato" onchange="this.form.submit()">
+      <option value="">Todos</option>
+      {% set seen_competitions = [] %}
+      {% for game in all_games_for_filter %}
+        {% if game.competition_name and game.competition_name not in seen_competitions %}
+          {% set _ = seen_competitions.append(game.competition_name) %}
+          <option value="{{ game.competition_name }}" {% if active_campeonato == game.competition_name %}selected{% endif %}>
+            {{ game.competition_name }}
+          </option>
+        {% endif %}
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-group">
+    <label for="filter-time">Time</label>
+    <input id="filter-time" name="time" type="text" placeholder="Nome do time..." value="{{ active_time or '' }}">
+  </div>
+  <button type="submit" class="button-primary filter-submit-btn">Filtrar</button>
+  {% if active_campeonato or active_time %}
+  <a href="{{ url_for('games.list_games') }}" class="button-secondary">Limpar</a>
+  {% endif %}
+</form>
+
 <section class="games-layout{% if not current_user.is_admin %} games-layout--full{% endif %}">
   <div class="table-section">
     <div class="api-match-board">
@@ -23,7 +50,7 @@
         <article class="match-row">
           <div class="match-date">
             {% if game.status == "finished" %}
-              <span class="status-pill status-finished">FINALIZADO</span>
+              <span class="status-pill status-finished">Finalizado</span>
             {% else %}
               <span>{{ match_time.date }}</span>
               <span>{{ match_time.time }}</span>
@@ -36,16 +63,23 @@
                 {% if game.home_crest %}<img src="{{ game.home_crest }}" alt="">{% endif %}
                 {{ game.home_team }}
               </span>
-              <strong>vs.</strong>
+              <strong class="vs-label">vs.</strong>
               <span class="team-name">
                 {% if game.away_crest %}<img src="{{ game.away_crest }}" alt="">{% endif %}
                 {{ game.away_team }}
               </span>
             </div>
             {% if game.competition_name or game.matchday %}
-            <span class="match-meta">
-              {% if game.competition_name %}{{ game.competition_name }}{% endif %}{% if game.matchday %} &bull; Rodada {{ game.matchday }}{% endif %}
-            </span>
+            <div class="match-meta-row">
+              {% if game.competition_name %}
+                <a href="{{ url_for('games.list_games', campeonato=game.competition_name) }}" class="competition-badge">
+                  {{ game.competition_name }}
+                </a>
+              {% endif %}
+              {% if game.matchday %}
+                <span class="matchday-label">Rodada {{ game.matchday }}</span>
+              {% endif %}
+            </div>
             {% endif %}
           </div>
           <div class="match-score">
@@ -63,12 +97,12 @@
           </div>
         </article>
       {% else %}
-        <div class="empty-state">Nenhum jogo cadastrado ainda.</div>
+        <div class="empty-state">Nenhum jogo encontrado{% if active_campeonato or active_time %} com os filtros selecionados{% endif %}.</div>
       {% endfor %}
     </div>
 
     {% if total_pages > 1 %}
-      {% set pagination_url = url_for('games.list_games') %}
+      {% set pagination_url = url_for('games.list_games', campeonato=active_campeonato or '', time=active_time or '') %}
       <div class="pagination-wrapper">
         {% include 'components/pagination.html' %}
       </div>
@@ -99,6 +133,81 @@
   </form>
   {% endif %}
 </section>
+
+<style>
+/* Filtros */
+.filters-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin: 1.5rem 0;
+  padding: 1rem 1.5rem;
+  background: var(--bg-card);
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+}
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 160px;
+}
+.filter-group label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
+.filter-group select,
+.filter-group input[type="text"] {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg);
+  color: var(--text-color);
+  font-size: 0.9rem;
+}
+
+/* VS centralizado */
+.vs-label {
+  display: block;
+  text-align: center;
+  padding: 0.25rem 0;
+  opacity: 0.6;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+}
+
+/* Badge de campeonato */
+.match-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  align-items: center;
+}
+.competition-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  background: var(--primary-color, #6c63ff);
+  color: #fff;
+  opacity: 0.85;
+  transition: opacity 0.2s;
+}
+.competition-badge:hover { opacity: 1; }
+.matchday-label {
+  font-size: 0.75rem;
+  opacity: 0.6;
+}
+</style>
 
 <script>
 // Adicionar feedback visual ao criar jogo

@@ -11,6 +11,26 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/toaster.css') }}">
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <link rel="icon" href="{{ url_for('static', filename='img/ball.png') }}" type="image/png">
+  <style>
+    /* Estilos base do dropdown já integrados no CSS ou injetados aqui */
+    .dropdown-container { position: relative; display: inline-block; }
+    .nav-btn { background: none; border: none; font: inherit; color: inherit; cursor: pointer; padding: 0; display: inline-flex; align-items: center; gap: 0.3rem; }
+    .dropdown-menu { display: none; position: absolute; top: 120%; right: 0; width: 320px; background: var(--bg-card, #fff); border: 1px solid var(--border-color, #eee); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; flex-direction: column; overflow: hidden; }
+    .dropdown-menu.active { display: flex; }
+    .dropdown-header { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color, #eee); font-weight: 600; font-size: 0.9rem; background: rgba(0,0,0,0.02); }
+    .dropdown-content { max-height: 350px; overflow-y: auto; }
+    .dropdown-item { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color, #eee); text-decoration: none; color: var(--text-color, #333); display: block; font-size: 0.85rem; }
+    .dropdown-item:last-child { border-bottom: none; }
+    .dropdown-item:hover { background: rgba(0,0,0,0.03); }
+    .dropdown-item.unread { border-left: 3px solid var(--primary-color, #6c63ff); background: rgba(108, 99, 255, 0.05); }
+    .dropdown-item h4 { margin: 0 0 0.25rem 0; font-size: 0.9rem; }
+    .dropdown-item p { margin: 0; opacity: 0.8; line-height: 1.3; }
+    .dropdown-footer { padding: 0.75rem; text-align: center; background: rgba(0,0,0,0.02); border-top: 1px solid var(--border-color, #eee); font-size: 0.85rem; text-decoration: none; font-weight: 600; }
+    .dropdown-footer:hover { background: rgba(0,0,0,0.05); }
+    @media (max-width: 768px) {
+      .dropdown-menu { width: 100vw; right: -20px; border-radius: 0; }
+    }
+  </style>
   {% block styles %}{% endblock %}
 </head>
 <body>
@@ -25,18 +45,27 @@
           <a href="{{ url_for('admin.dashboard') }}">Dashboard</a>
           <a href="{{ url_for('games.list_games') }}">Jogos</a>
           <a href="{{ url_for('admin.users') }}">Usuários</a>
-          <a href="{{ url_for('notification.inbox') }}" class="nav-notification">
-            Notificações <span id="notification-badge" class="badge" style="display: none;">0</span>
-          </a>
         {% else %}
           <a href="{{ url_for('games.list_games') }}">Jogos</a>
           <a href="{{ url_for('ranking.index') }}">Ranking</a>
           <a href="{{ url_for('chat.list_groups') }}">Grupos</a>
           <a href="{{ url_for('chat.bot_chat') }}">Bot</a>
-          <a href="{{ url_for('notification.inbox') }}" class="nav-notification">
-            Notificações <span id="notification-badge" class="badge" style="display: none;">0</span>
-          </a>
         {% endif %}
+        
+        <div class="dropdown-container" id="notif-dropdown-container">
+          <button type="button" class="nav-notification nav-btn" id="notif-toggle">
+            Notificações <span id="notification-badge" class="badge" style="display: none;">0</span>
+          </button>
+          <div class="dropdown-menu" id="notif-menu">
+            <div class="dropdown-header">Notificações Recentes</div>
+            <div class="dropdown-content" id="notif-content">
+              <!-- Populado via JS -->
+              <div style="padding: 1rem; text-align: center; opacity: 0.6;">Carregando...</div>
+            </div>
+            <a href="{{ url_for('notification.inbox') }}" class="dropdown-footer">Ver todas</a>
+          </div>
+        </div>
+
         <a href="{{ url_for('auth.profile') }}">Perfil</a>
         <form method="post" action="{{ url_for('auth.logout') }}" style="display: inline; margin: 0;" id="logout-form">
           <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">

@@ -38,3 +38,40 @@ def toggle_role(user_id):
     User.update_role(user_id, new_role)
     
     return jsonify({"success": True, "new_role": new_role})
+
+@admin_bp.route("/admin/users/<int:user_id>/notify", methods=["POST"])
+@admin_required
+def notify_user(user_id):
+    data = request.get_json(silent=True) or {}
+    message = data.get("message", "").strip()
+    
+    if not message:
+        return jsonify({"error": "A mensagem não pode estar vazia."}), 400
+        
+    user = User.get_by_id(user_id)
+    if not user:
+        return jsonify({"error": "Usuário não encontrado."}), 404
+        
+    from models.notification import Notification
+    Notification.create(
+        user_id=user_id,
+        type="admin_message",
+        title="Mensagem do Administrador",
+        body=message
+    )
+    
+    return jsonify({"success": True, "message": "Notificação enviada com sucesso!"})
+
+@admin_bp.route("/admin/users/<int:user_id>", methods=["DELETE"])
+@admin_required
+def delete_user(user_id):
+    if str(user_id) == str(current_user.id):
+        return jsonify({"error": "Você não pode excluir sua própria conta."}), 400
+        
+    user = User.get_by_id(user_id)
+    if not user:
+        return jsonify({"error": "Usuário não encontrado."}), 404
+        
+    User.delete(user_id)
+    
+    return jsonify({"success": True, "message": "Usuário excluído com sucesso!"})

@@ -38,13 +38,18 @@ def list_games():
             "games/list.html",
             pool=None,
             games=[],
+            all_games_for_filter=[],
+            active_campeonato=None,
+            active_time=None,
             current_page=1,
             total_pages=1,
             is_admin=current_user.is_admin,
         )
 
-    # Obter página do query parameter
+    # Obter página e filtros do query parameter
     page = request.args.get("page", 1, type=int)
+    active_campeonato = request.args.get("campeonato", "").strip()
+    active_time = request.args.get("time", "").strip()
     if page < 1:
         page = 1
 
@@ -71,6 +76,16 @@ def list_games():
                 deduplicated.append(game)
     all_games = deduplicated
 
+    # Lista completa para popular o dropdown de filtros (sem aplicar filtros)
+    all_games_for_filter = all_games
+
+    # Aplicar filtros
+    if active_campeonato:
+        all_games = [g for g in all_games if (g["competition_name"] or "") == active_campeonato]
+    if active_time:
+        term = active_time.lower()
+        all_games = [g for g in all_games if term in (g["home_team"] or "").lower() or term in (g["away_team"] or "").lower()]
+
     # Calcular paginação
     total_items = len(all_games)
     total_pages = (total_items + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE
@@ -88,6 +103,9 @@ def list_games():
         "games/list.html",
         pool=pool,
         games=games,
+        all_games_for_filter=all_games_for_filter,
+        active_campeonato=active_campeonato,
+        active_time=active_time,
         current_page=page,
         total_pages=total_pages,
         total_items=total_items,
@@ -199,6 +217,28 @@ def record_result(game_id):
         game = Game.record_result(game_id, home_score, away_score)
         ScoringService.recalculate_game(game_id)
         
+        # Emitir evento SocketIO para atualizar a tela em tempo real
+        from app import socketio
+        ranking = Score.get_ranking(game["pool_id"])
+        bets = _db().execute(
+            """
+            SELECT bets.*, users.name
+              FROM bets
+              JOIN users ON users.id = bets.user_id
+             WHERE bets.game_id = ?
+             ORDER BY bets.points_earned DESC, users.name
+            """,
+            (game_id,),
+        ).fetchall()
+        
+        socketio.emit("game_result_updated", {
+            "game_id": game_id,
+            "home_score": home_score,
+            "away_score": away_score,
+            "bets": [dict(b) for b in bets],
+            "ranking": [dict(r) for r in ranking]
+        }, to=f"game_{game_id}")
+        
         # Notificar membros do bolão sobre o resultado
         pool_members = _db().execute(
             "SELECT user_id FROM pool_members WHERE pool_id = ?",
@@ -234,13 +274,10 @@ def chat():
 @game_bp.route("/chat/messages", methods=["GET", "POST"])
 @login_required
 def chat_messages():
+    # Esta rota parece obsoleta, pois o chat bot agora usa /chat/bot/send no chat_controller.py
+    # Mantendo apenas por compatibilidade caso haja alguma tela antiga usando
     if request.method == "POST":
         data = request.get_json(silent=True) or {}
         text = data.get("text", "").strip()
         return jsonify({"name": current_user.name, "text": text})
-    return jsonify(
-        [
-            {"name": "BolãoFácil", "text": "Bem-vindo ao chat do bolão."},
-            {"name": current_user.name, "text": "Pronto para palpitar!"},
-        ]
-    )
+    return jsonify([])

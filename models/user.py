@@ -112,6 +112,20 @@ class User(UserMixin):
         _db().commit()
         return User.get_by_id(user_id)
 
+    @staticmethod
+    def delete(user_id):
+        # Excluir dados relacionados (bets, pool_members, notifications, etc)
+        _db().execute("DELETE FROM bets WHERE user_id = ?", (user_id,))
+        _db().execute("DELETE FROM scores WHERE user_id = ?", (user_id,))
+        _db().execute("DELETE FROM pool_members WHERE user_id = ?", (user_id,))
+        _db().execute("DELETE FROM notifications WHERE user_id = ?", (user_id,))
+        _db().execute("DELETE FROM chat_group_members WHERE user_id = ?", (user_id,))
+        _db().execute("DELETE FROM chat_messages WHERE sender_id = ?", (user_id,))
+        
+        # Excluir o próprio usuário
+        _db().execute("DELETE FROM users WHERE id = ?", (user_id,))
+        _db().commit()
+
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 

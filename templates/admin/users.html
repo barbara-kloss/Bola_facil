@@ -29,9 +29,17 @@
         <td style="padding: 1rem;">{{ u.created_at }}</td>
         <td style="padding: 1rem;">
           {% if u.id|string != current_user.id|string %}
-          <button class="button-secondary toggle-role-btn" data-user-id="{{ u.id }}">
-            {{ 'Remover Admin' if u.is_admin else 'Tornar Admin' }}
-          </button>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <button class="button-secondary toggle-role-btn" data-user-id="{{ u.id }}" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">
+              {{ 'Remover Admin' if u.is_admin else 'Tornar Admin' }}
+            </button>
+            <button class="button-secondary notify-user-btn" data-user-id="{{ u.id }}" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" title="Enviar Notificação">
+              Notificar
+            </button>
+            <button class="button-secondary delete-user-btn" data-user-id="{{ u.id }}" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; border-color: #fca5a5; color: #dc2626;" title="Excluir Usuário">
+              Excluir
+            </button>
+          </div>
           {% else %}
           <span style="color: var(--text-color-muted); font-size: 0.85rem;">Você</span>
           {% endif %}
@@ -43,6 +51,27 @@
     </tbody>
   </table>
 </section>
+
+<!-- Modal Notificar -->
+<div class="modal-overlay" id="notify-modal">
+  <div class="custom-modal">
+    <div class="modal-header">
+      <h3>Enviar Notificação</h3>
+      <button class="modal-close-btn" onclick="document.getElementById('notify-modal').classList.remove('active')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="notify-message">Mensagem:</label>
+        <textarea id="notify-message" rows="4" style="width: 100%; border-radius: 6px; padding: 0.5rem;"></textarea>
+      </div>
+      <input type="hidden" id="notify-user-id">
+    </div>
+    <div class="modal-footer">
+      <button class="button-secondary" onclick="document.getElementById('notify-modal').classList.remove('active')">Cancelar</button>
+      <button class="button-primary" id="send-notify-btn">Enviar</button>
+    </div>
+  </div>
+</div>
 
 <script>
 document.querySelectorAll('.phone-number').forEach(el => {
@@ -79,6 +108,68 @@ document.querySelectorAll('.toggle-role-btn').forEach(btn => {
       this.disabled = false;
       this.textContent = originalText;
     }
+  });
+});
+
+// Ações de Notificar
+document.querySelectorAll('.notify-user-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.getElementById('notify-user-id').value = this.getAttribute('data-user-id');
+    document.getElementById('notify-message').value = '';
+    document.getElementById('notify-modal').classList.add('active');
+  });
+});
+
+document.getElementById('send-notify-btn').addEventListener('click', async function() {
+  const userId = document.getElementById('notify-user-id').value;
+  const message = document.getElementById('notify-message').value;
+  
+  if(!message.trim()) return Toast.error('Digite uma mensagem.');
+  
+  this.disabled = true;
+  this.textContent = 'Enviando...';
+  
+  try {
+    const res = await fetch(`/admin/users/${userId}/notify`, { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    });
+    const data = await res.json();
+    
+    if (res.ok) {
+      Toast.success(data.message);
+      document.getElementById('notify-modal').classList.remove('active');
+    } else {
+      Toast.error(data.error || 'Erro ao enviar notificação.');
+    }
+  } catch(err) {
+    Toast.error('Erro de conexão.');
+  } finally {
+    this.disabled = false;
+    this.textContent = 'Enviar';
+  }
+});
+
+// Ação de Excluir Usuário
+document.querySelectorAll('.delete-user-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const userId = this.getAttribute('data-user-id');
+    showConfirmModal('Atenção! Esta ação excluirá permanentemente o usuário, seus palpites, pontos e todas as informações relacionadas. Tem certeza que deseja continuar?', async () => {
+      try {
+        const res = await fetch(`/admin/users/${userId}`, { method: 'DELETE' });
+        const data = await res.json();
+        
+        if (res.ok) {
+          Toast.success(data.message);
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          Toast.error(data.error || 'Erro ao excluir usuário.');
+        }
+      } catch(err) {
+        Toast.error('Erro de conexão.');
+      }
+    });
   });
 });
 </script>

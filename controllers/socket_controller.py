@@ -55,6 +55,24 @@ def register_socket_handlers(socketio):
         if group_id:
             leave_room(f"group_{group_id}")
 
+    @socketio.on("join_game")
+    def on_join_game(data):
+        if not _require_auth():
+            return
+        game_id = data.get("game_id")
+        if game_id:
+            room = f"game_{game_id}"
+            join_room(room)
+            emit("joined_game", {"game_id": game_id, "room": room})
+
+    @socketio.on("leave_game")
+    def on_leave_game(data):
+        if not _require_auth():
+            return
+        game_id = data.get("game_id")
+        if game_id:
+            leave_room(f"game_{game_id}")
+
     @socketio.on("send_message")
     def on_send_message(data):
         if not _require_auth():
