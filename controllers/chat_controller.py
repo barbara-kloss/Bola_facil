@@ -130,7 +130,7 @@ def _try_save_bet(user, parsed: dict, pool_id=None):
     
     if is_locked:
         return False, (
-            f"⛔ O prazo para palpitar em *{game['home_team']} vs {game['away_team']}* já encerrou! "
+            f" O prazo para palpitar em *{game['home_team']} vs {game['away_team']}* já encerrou! "
             f"Os palpites fecham {lockout_minutes} minutos antes da partida."
         )
     
@@ -144,8 +144,8 @@ def _try_save_bet(user, parsed: dict, pool_id=None):
     
     # Determina se foi atualização ou novo palpite
     return True, (
-        f"✅ Palpite salvo! *{game['home_team']} {parsed['home_score']} x {parsed['away_score']} {game['away_team']}*. "
-        "Boa sorte! 🍀"
+        f" Palpite salvo! *{game['home_team']} {parsed['home_score']} x {parsed['away_score']} {game['away_team']}*. "
+        "Boa sorte! "
     )
 
 
@@ -165,9 +165,9 @@ def _generate_bot_reply(text: str, user) -> str:
     
     if is_saudacao:
         saudacoes = [
-            f"Olá, {user.name}! 👋 Como posso te ajudar hoje? Digite *ajuda* para ver os comandos.",
-            f"Oi {user.name}! Que bom te ver por aqui! 😄 Precisa de algo?",
-            f"Eai {user.name}! Preparado para acertar os palpites? ⚽",
+            f"Olá, {user.name}!  Como posso te ajudar hoje? Digite *ajuda* para ver os comandos.",
+            f"Oi {user.name}! Que bom te ver por aqui!  Precisa de algo?",
+            f"Eai {user.name}! Preparado para acertar os palpites? ",
             f"Olá! Sou o assistente do BolãoFácil. Para fazer um palpite pelo chat, envie no formato: *Time A 2 x 1 Time B*",
         ]
         return random.choice(saudacoes)
@@ -217,14 +217,14 @@ def _generate_bot_reply(text: str, user) -> str:
                 ranking = Score.get_ranking(pool["id"])
                 if ranking:
                     top = ranking[:3]
-                    linhas = ["**🏆 Top Ranking:**"]
-                    medals = ["🥇", "🥈", "🥉"]
+                    linhas = ["** Top Ranking:**"]
+                    medals = ["", "", ""]
                     for i, r in enumerate(top):
                         linhas.append(f"{medals[i]} {r['name']} — {r['total_points']} pts")
                     return "\n".join(linhas)
         except Exception:
             pass
-        return "Não consegui acessar o ranking agora. 😕 Tente visitar a página de Ranking."
+        return "Não consegui acessar o ranking agora.  Tente visitar a página de Ranking."
 
     # ── Próximos jogos ────────────────────────────────────────────────────────
     if any(w in t for w in ["jogo", "partida", "próximo", "proximo", "hoje", "quando", "agenda"]):
@@ -234,7 +234,7 @@ def _generate_bot_reply(text: str, user) -> str:
             games = Game.list(pool["id"] if pool else None)
             agendados = [g for g in games if g["status"] == "scheduled"][:5]
             if agendados:
-                linhas = ["**⚽ Próximos jogos:**"]
+                linhas = ["** Próximos jogos:**"]
                 for g in agendados:
                     dt = str(g["match_datetime"])[:16].replace("T", " ")
                     linhas.append(f"• {g['home_team']} vs {g['away_team']} — {dt}")
@@ -264,7 +264,7 @@ def _generate_bot_reply(text: str, user) -> str:
                 for r in ranking:
                     if str(r["user_id"]) == str(user.id):
                         pos = ranking.index(r) + 1
-                        return f"Você está na **{pos}ª posição** com **{r['total_points']} pontos**! Continue assim! 🏆"
+                        return f"Você está na **{pos}ª posição** com **{r['total_points']} pontos**! Continue assim! "
                 return "Você ainda não tem pontos registrados. Faça seus palpites!"
         except Exception:
             pass
@@ -277,14 +277,14 @@ def _generate_bot_reply(text: str, user) -> str:
     # ── Ajuda / comandos ──────────────────────────────────────────────────────
     if any(w in t for w in ["ajuda", "help", "comando", "o que você faz", "o que vc faz", "como", "como funciona"]):
         return (
-            "**🤖 Comandos disponíveis:**\n"
+            "** Comandos disponíveis:**\n"
             "• *oi* / *olá* — saudação\n"
             "• *ranking* — ver o top ranking\n"
             "• *jogos* — próximos jogos\n"
             "• *listar jogos* — todos os jogos com índice\n"
             "• *pontos* — sua pontuação\n"
             "• *histórico* — seus palpites\n\n"
-            "**⚽ Para fazer um palpite pelo chat:**\n"
+            "** Para fazer um palpite pelo chat:**\n"
             "Envie: *Time A [placar] x [placar] Time B*\n"
             "Exemplo: *Flamengo 2 x 1 Vasco*"
         )

@@ -2,7 +2,7 @@
 {% block title %}Chat com o Bot - {{ brand_name }}{% endblock %}
 {% block content %}
 <section class="content-head">
-  <h1>Chat com o Bot ⚽</h1>
+  <h1>Chat com o Bot </h1>
   <p>Faça palpites e tire dúvidas conversando com nosso assistente virtual.</p>
 </section>
 
@@ -14,7 +14,7 @@
       </div>
     {% else %}
       <div class="chat-message bot">
-        <div class="message-content">Olá, <strong>{{ current_user.name }}</strong>! 👋 Eu sou o assistente do BolãoFácil.<br>
+        <div class="message-content">Olá, <strong>{{ current_user.name }}</strong>!  Eu sou o assistente do BolãoFácil.<br>
         Para fazer um palpite, envie: <em>Time A 2 x 1 Time B</em><br>
         Digite <strong>ajuda</strong> para ver todos os comandos.</div>
       </div>
@@ -22,9 +22,9 @@
   </div>
 
   <div class="chat-suggestions">
-    <button class="suggestion-chip" onclick="sendSuggestion('ajuda')">❓ Ajuda</button>
+    <button class="suggestion-chip" onclick="sendSuggestion('ajuda')"> Ajuda</button>
     <button class="suggestion-chip" onclick="sendSuggestion('listar jogos')">📋 Listar Jogos</button>
-    <button class="suggestion-chip" onclick="sendSuggestion('ranking')">🏆 Ranking</button>
+    <button class="suggestion-chip" onclick="sendSuggestion('ranking')"> Ranking</button>
     <button class="suggestion-chip" onclick="sendSuggestion('meus pontos')">⭐ Meus Pontos</button>
   </div>
 

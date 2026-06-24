@@ -17,15 +17,15 @@
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
       <div class="form-group">
         <label for="name">Nome</label>
-        <input id="name" name="name" type="text" value="{{ current_user.name }}" required>
+        <input id="name" name="name" type="text" value="{{ current_user.name }}" required disabled>
       </div>
       <div class="form-group">
         <label for="email">E-mail</label>
-        <input id="email" name="email" type="email" value="{{ current_user.email }}" required>
+        <input id="email" name="email" type="email" value="{{ current_user.email }}" required disabled>
       </div>
       <div class="form-group">
         <label for="whatsapp_phone">WhatsApp</label>
-        <input id="whatsapp_phone" name="whatsapp_phone" type="tel" autocomplete="tel" placeholder="(11) 98765-4321" maxlength="15" value="{{ current_user.whatsapp_phone or '' }}">
+        <input id="whatsapp_phone" name="whatsapp_phone" type="tel" autocomplete="tel" placeholder="(11) 98765-4321" maxlength="15" value="{{ current_user.whatsapp_phone or '' }}" disabled>
       </div>
     </div>
 
@@ -33,7 +33,7 @@
       {% if not current_user.is_admin %}
       <h2>Preferências de Notificação</h2>
       <div class="form-group" style="flex-direction: row; align-items: center; gap: 1rem;">
-        <input type="checkbox" id="notifications_enabled" name="enabled" value="1" {{ 'checked' if current_user.notifications_enabled else '' }} style="width: auto;">
+        <input type="checkbox" id="notifications_enabled" name="enabled" value="1" {{ 'checked' if current_user.notifications_enabled else '' }} style="width: auto;" disabled>
         <label for="notifications_enabled" style="margin-bottom: 0;">Receber notificações do sistema</label>
       </div>
       {% else %}
@@ -42,8 +42,9 @@
       {% endif %}
     </div>
 
-    <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
-      <button type="submit" class="button-primary">Salvar Alterações</button>
+    <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
+      <button type="button" id="edit-profile-btn" class="button-secondary">Editar Perfil</button>
+      <button type="submit" id="save-profile-btn" class="button-primary" style="display: none;">Salvar Alterações</button>
     </div>
   </form>
 </section>
@@ -67,6 +68,20 @@
         }
         phoneInput.value = raw;
       }
+    });
+  }
+
+  const editBtn = document.getElementById('edit-profile-btn');
+  const saveBtn = document.getElementById('save-profile-btn');
+  if (editBtn) {
+    editBtn.addEventListener('click', function() {
+      document.querySelectorAll('form.side-form input').forEach(input => {
+        if (input.name !== '_csrf_token') {
+          input.disabled = false;
+        }
+      });
+      editBtn.style.display = 'none';
+      saveBtn.style.display = 'inline-flex';
     });
   }
 </script>

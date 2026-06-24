@@ -319,7 +319,7 @@
     <div class="score-box" id="away-score-box">{{ game.away_score if game.away_score is not none else "-" }}</div>
   </div>
 </section>
-{% if current_user.is_admin %}
+{% if current_user.is_admin and game.status != 'finished' %}
 <form method="post" action="{{ url_for('games.record_result', game_id=game.id) }}" class="form result-form">
   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
   <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">

@@ -213,7 +213,7 @@
   // ─── helpers ─────────────────────────────────────────────────────────────
   function setStatus(state) {
     statusDot.className = 'chat-status-dot ' + state;
-    const labels = { connected: '🟢 Online', disconnected: '⚫ Offline', error: '🟠 Reconectando...' };
+    const labels = { connected: '🟢 Online', disconnected: ' Offline', error: '🟠 Reconectando...' };
     statusText.textContent = labels[state] || state;
     sendBtn.disabled = state !== 'connected';
   }
