@@ -51,6 +51,7 @@ def list_games():
     page = request.args.get("page", 1, type=int)
     active_campeonato = request.args.get("campeonato", "").strip()
     active_time = request.args.get("time", "").strip()
+    active_status_placar = request.args.get("status_placar", "").strip()
     if page < 1:
         page = 1
 
@@ -86,6 +87,11 @@ def list_games():
     if active_time:
         term = active_time.lower()
         all_games = [g for g in all_games if term in (g["home_team"] or "").lower() or term in (g["away_team"] or "").lower()]
+    if active_status_placar:
+        if active_status_placar == "com_placar":
+            all_games = [g for g in all_games if g["home_score"] is not None]
+        elif active_status_placar == "sem_placar":
+            all_games = [g for g in all_games if g["home_score"] is None]
 
     # Calcular paginação
     total_items = len(all_games)
@@ -107,6 +113,7 @@ def list_games():
         all_games_for_filter=all_games_for_filter,
         active_campeonato=active_campeonato,
         active_time=active_time,
+        active_status_placar=active_status_placar,
         current_page=page,
         total_pages=total_pages,
         total_items=total_items,

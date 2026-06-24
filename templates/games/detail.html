@@ -515,7 +515,7 @@
         
         if (response.ok) {
           Toast.success(result.message || 'Resultado salvo!');
-          resultForm.remove(); // socket.io will handle the UI update
+          setTimeout(() => window.location.reload(), 500); // recarrega a tela para atualizar a tabela e escalações instantaneamente
         } else {
           Toast.error(result.error || 'Erro ao salvar.');
           submitBtn.disabled = false;

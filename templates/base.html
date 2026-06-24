@@ -90,10 +90,12 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
               Perfil
             </a>
+            {% if not current_user.is_admin %}
             <a href="{{ url_for('bets.bet_history') }}" class="user-dropdown-item">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
               Meus Palpites
             </a>
+            {% endif %}
             <div class="user-dropdown-divider"></div>
             <form method="post" action="{{ url_for('auth.logout') }}" style="margin:0;" id="logout-form">
               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">

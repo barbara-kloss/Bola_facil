@@ -31,8 +31,16 @@
     <label for="filter-time">Time</label>
     <input id="filter-time" name="time" type="text" placeholder="Nome do time..." value="{{ active_time or '' }}">
   </div>
+  <div class="filter-group">
+    <label for="filter-status-placar">Status do Placar</label>
+    <select id="filter-status-placar" name="status_placar" onchange="this.form.submit()">
+      <option value="">Todos</option>
+      <option value="com_placar" {% if active_status_placar == 'com_placar' %}selected{% endif %}>Com Placar</option>
+      <option value="sem_placar" {% if active_status_placar == 'sem_placar' %}selected{% endif %}>Sem Placar</option>
+    </select>
+  </div>
   <button type="submit" class="button-primary filter-submit-btn">Filtrar</button>
-  {% if active_campeonato or active_time %}
+  {% if active_campeonato or active_time or active_status_placar %}
   <a href="{{ url_for('games.list_games') }}" class="button-secondary">Limpar</a>
   {% endif %}
 </form>
@@ -55,11 +63,11 @@
           data-comp="{{ comp_key }}"
           data-status="{{ game.status }}">
           <div class="match-date">
+            <span>{{ match_time.date }}</span>
+            <span>{{ match_time.time }}</span>
             {% if game.status == "finished" %}
               <span class="status-pill status-finished">Finalizado</span>
             {% else %}
-              <span>{{ match_time.date }}</span>
-              <span>{{ match_time.time }}</span>
               <span class="status-pill status-{{ game.status }}">{{ match_status_label(game.status, game.api_status) }}</span>
             {% endif %}
           </div>
@@ -119,7 +127,7 @@
     </div>
 
     {% if total_pages > 1 %}
-      {% set pagination_url = url_for('games.list_games', campeonato=active_campeonato or '', time=active_time or '') %}
+      {% set pagination_url = url_for('games.list_games', campeonato=active_campeonato or '', time=active_time or '', status_placar=active_status_placar or '') %}
       <div class="pagination-wrapper">
         {% include 'components/pagination.html' %}
       </div>
@@ -350,20 +358,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (response.ok) {
           Toast.success(result.message || 'Resultado salvo!');
-          // Atualiza a UI localmente na listagem
-          const matchRow = form.closest('.match-row');
-          if (matchRow) {
-            matchRow.dataset.status = 'finished';
-            const scoreDiv = matchRow.querySelector('.match-score');
-            if (scoreDiv) {
-              scoreDiv.innerHTML = `${data.home_score} x ${data.away_score}`;
-            }
-            const dateDiv = matchRow.querySelector('.match-date');
-            if (dateDiv) {
-              dateDiv.innerHTML = '<span class="status-pill status-finished">Finalizado</span>';
-            }
-            form.remove(); // Remove o form, já que finalizou
-          }
+          setTimeout(() => window.location.reload(), 500);
         } else {
           Toast.error(result.error || 'Erro ao salvar.');
           submitBtn.disabled = false;
