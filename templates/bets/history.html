@@ -66,12 +66,12 @@
         <div class="history-scores">
           <div class="history-score-row">
             <span class="score-label">Palpite</span>
-            <span class="score-value score-bet">{{ r.predicted_home_score }} × {{ r.predicted_away_score }}</span>
+            <span class="score-value score-bet">{{ r.predicted_home_score }} x {{ r.predicted_away_score }}</span>
           </div>
           {% if r.game_status == 'finished' and r.home_score is not none %}
           <div class="history-score-row">
             <span class="score-label">Real</span>
-            <span class="score-value score-real">{{ r.home_score }} × {{ r.away_score }}</span>
+            <span class="score-value score-real">{{ r.home_score }} x {{ r.away_score }}</span>
           </div>
           {% else %}
           <div class="history-score-row">

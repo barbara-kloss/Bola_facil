@@ -98,7 +98,17 @@
           <div class="match-actions">
             <a class="button-secondary" href="{{ url_for('games.game_detail', game_id=game.id) }}">Detalhes</a>
             {% if game.status != 'finished' %}
-            <a class="button-primary" href="{{ url_for('bets.bet_game', game_id=game.id) }}">Palpitar</a>
+              {% if current_user.is_admin %}
+                <form method="post" action="{{ url_for('games.record_result', game_id=game.id) }}" style="display: flex; gap: 0.3rem; align-items: center; margin: 0;">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                  <input type="number" name="home_score" min="0" style="width: 36px; padding: 0.2rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.85rem;" required title="Gols {{ game.home_team }}">
+                  <span style="font-size: 0.8rem; color: var(--text-color-muted);">x</span>
+                  <input type="number" name="away_score" min="0" style="width: 36px; padding: 0.2rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.85rem;" required title="Gols {{ game.away_team }}">
+                  <button type="submit" class="button-primary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">Salvar</button>
+                </form>
+              {% else %}
+                <a class="button-primary" href="{{ url_for('bets.bet_game', game_id=game.id) }}">Palpitar</a>
+              {% endif %}
             {% endif %}
           </div>
         </article>
