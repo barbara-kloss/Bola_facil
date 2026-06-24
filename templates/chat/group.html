@@ -215,7 +215,7 @@
     statusDot.className = 'chat-status-dot ' + state;
     const labels = { connected: '🟢 Online', disconnected: ' Offline', error: '🟠 Reconectando...' };
     statusText.textContent = labels[state] || state;
-    sendBtn.disabled = state !== 'connected';
+    // Removemos o disable do botão para permitir envio offline (via REST)
   }
 
   function appendBubble({ sender_id, sender_name, text }) {
@@ -258,18 +258,39 @@
   });
 
   // ─── Send ─────────────────────────────────────────────────────────────────
-  document.getElementById('chat-form').addEventListener('submit', function(e) {
+  document.getElementById('chat-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     const text = inputEl.value.trim();
     if (!text || sendBtn.disabled) return;
-    socket.emit('send_message', { group_id: GROUP_ID, text });
+    
     inputEl.value = '';
     inputEl.focus();
+
+    if (socket.connected) {
+      socket.emit('send_message', { group_id: GROUP_ID, text });
+    } else {
+      sendBtn.disabled = true;
+      try {
+        const res = await fetch("{{ url_for('chat.send_group_message', group_id=group.id) }}", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text })
+        });
+        if (res.ok) {
+          appendBubble({ sender_id: MY_ID, sender_name: MY_NAME, text });
+        } else {
+          Toast.error("Erro ao enviar mensagem.");
+        }
+      } catch (err) {
+        Toast.error("Sem conexão com a internet.");
+      }
+      sendBtn.disabled = false;
+    }
   });
 
-  // Enable send-btn only while socket is connected
+  // Enable send-btn when there's text
   inputEl.addEventListener('input', () => {
-    if (socket.connected) sendBtn.disabled = !inputEl.value.trim();
+    sendBtn.disabled = !inputEl.value.trim();
   });
 
   // ─── Invite ─────────────────────────────────────────────────────────────
