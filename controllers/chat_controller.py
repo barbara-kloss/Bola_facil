@@ -302,7 +302,25 @@ def _generate_bot_reply(text: str, user) -> str:
 @login_required
 def list_groups():
     groups = ChatGroup.list_for_user(current_user.id)
-    return render_template("chat/grupos.html", groups=groups)
+    formatted_groups = []
+    for g in groups:
+        gd = dict(g)
+        try:
+            from datetime import datetime, timezone, timedelta
+            dt_str = str(gd.get("created_at", ""))
+            # SQLite default is often "YYYY-MM-DD HH:MM:SS"
+            if " " in dt_str and "T" not in dt_str:
+                dt_str = dt_str.replace(" ", "T")
+            dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            dt = dt.astimezone(timezone(timedelta(hours=-3)))
+            gd["created_at_formatted"] = dt.strftime("%d/%m/%Y às %H:%M")
+        except Exception:
+            gd["created_at_formatted"] = gd.get("created_at", "")
+        formatted_groups.append(gd)
+        
+    return render_template("chat/grupos.html", groups=formatted_groups)
 
 @chat_bp.route("/chat/grupos/criar", methods=["POST"])
 @login_required

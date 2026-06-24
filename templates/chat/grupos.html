@@ -22,7 +22,7 @@
         <h2 style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; color: var(--blue-dark); font-weight: 800;">
           <span style="color: var(--gray-dark); font-weight: 600;">#</span>{{ group.name }}
         </h2>
-        <p style="opacity: 0.7; font-size: 0.875rem;">Criado em {{ group.created_at }}</p>
+        <p style="opacity: 0.7; font-size: 0.875rem;">Criado em {{ group.created_at_formatted }}</p>
       </a>
     {% else %}
       <div class="empty-state">Você ainda não participa de nenhum grupo.</div>
