@@ -320,20 +320,37 @@
   </div>
 </section>
 {% if current_user.is_admin and game.status != 'finished' %}
-<form method="post" action="{{ url_for('games.record_result', game_id=game.id) }}" class="form result-form">
-  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
-    <div class="form-group">
-      <label for="home_score">Gols {{ game.home_team }}</label>
-      <input id="home_score" name="home_score" type="number" min="0" required style="text-align: center; font-size: 1.5rem; padding: 1rem;">
+<div style="text-align: center; margin-bottom: 2rem;">
+  <button type="button" class="button-primary" onclick="openAdminModal('{{ game.id }}', '{{ game.home_team }}', '{{ game.away_team }}')" style="padding: 0.8rem 2.5rem; font-size: 1rem; font-weight: 800; border-radius: 50px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">Lançar Resultado</button>
+</div>
+
+<!-- Modal Admin Resultado (Detail) -->
+<div id="admin-result-modal" class="modal-overlay">
+  <div class="custom-modal" style="max-width: 400px; padding: 2rem; border-radius: 16px; background: linear-gradient(135deg, var(--white), #f8fafc); text-align: center; position: relative;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+      <h3 style="margin: 0; color: var(--blue-dark); font-weight: 800; font-size: 1.1rem; text-transform: uppercase;">Lançar Resultado Oficial</h3>
+      <button type="button" id="close-admin-result-modal" onclick="closeAdminModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #94a3b8;">&times;</button>
     </div>
-    <div class="form-group">
-      <label for="away_score">Gols {{ game.away_team }}</label>
-      <input id="away_score" name="away_score" type="number" min="0" required style="text-align: center; font-size: 1.5rem; padding: 1rem;">
-    </div>
+    
+    <form id="admin-result-form" method="post" action="{{ url_for('games.record_result', game_id=game.id) }}">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div style="display: flex; justify-content: center; align-items: center; gap: 1.5rem; margin-bottom: 2rem;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem; flex: 1; max-width: 120px;">
+          <label id="modal-home-team" style="font-weight: 700; font-size: 1rem; color: var(--text-color); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">{{ game.home_team }}</label>
+          <input id="modal-home-score" name="home_score" type="number" min="0" class="no-spin premium-score-input" required style="width: 70px; height: 70px; font-size: 2rem; border-radius: 16px;">
+        </div>
+        
+        <span style="font-size: 1.5rem; font-weight: 900; color: #cbd5e1; padding-top: 1.5rem;">X</span>
+        
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem; flex: 1; max-width: 120px;">
+          <label id="modal-away-team" style="font-weight: 700; font-size: 1rem; color: var(--text-color); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">{{ game.away_team }}</label>
+          <input id="modal-away-score" name="away_score" type="number" min="0" class="no-spin premium-score-input" required style="width: 70px; height: 70px; font-size: 2rem; border-radius: 16px;">
+        </div>
+      </div>
+      <button type="submit" class="premium-save-btn" style="width: 100%; height: 48px; border-radius: 50px; font-size: 1rem;">Confirmar Placar</button>
+    </form>
   </div>
-  <button type="submit">Lançar resultado</button>
-</form>
+</div>
 {% endif %}
 
 <section class="lineup-section">
@@ -459,6 +476,49 @@
     socket.emit('join_game', { game_id: gameId });
   });
 
+  function openAdminModal(gameId, homeTeam, awayTeam) {
+    const adminModal = document.getElementById('admin-result-modal');
+    if (!adminModal) return;
+    const adminForm = document.getElementById('admin-result-form');
+    if (adminForm && gameId) {
+      // In case we need to update action dynamically
+      // adminForm.action = ...
+    }
+    adminModal.style.display = 'flex';
+    adminModal.style.opacity = '1';
+    adminModal.style.pointerEvents = 'auto';
+    adminModal.classList.add('active');
+    setTimeout(() => {
+      const homeScoreInput = document.getElementById('modal-home-score');
+      if (homeScoreInput) homeScoreInput.focus();
+    }, 100);
+  }
+
+  function closeAdminModal() {
+    const adminModal = document.getElementById('admin-result-modal');
+    if (!adminModal) return;
+    adminModal.style.opacity = '0';
+    adminModal.style.pointerEvents = 'none';
+    adminModal.classList.remove('active');
+    setTimeout(() => {
+      adminModal.style.display = 'none';
+    }, 300);
+  }
+
+  window.openAdminModal = openAdminModal;
+  window.closeAdminModal = closeAdminModal;
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('admin-result-modal');
+    if (modal) {
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeAdminModal();
+      });
+      const closeBtn = document.getElementById('close-admin-result-modal');
+      if (closeBtn) closeBtn.addEventListener('click', closeAdminModal);
+    }
+  });
+
   socket.on('game_result_updated', (data) => {
     if (data.game_id !== gameId) return;
 
@@ -489,7 +549,7 @@
     }
   });
 
-  const resultForm = document.querySelector('form.result-form');
+  const resultForm = document.getElementById('admin-result-form');
   if (resultForm) {
     resultForm.addEventListener('submit', async function(e) {
       e.preventDefault();
@@ -515,6 +575,7 @@
         
         if (response.ok) {
           Toast.success(result.message || 'Resultado salvo!');
+          closeAdminModal();
           setTimeout(() => window.location.reload(), 500); // recarrega a tela para atualizar a tabela e escalações instantaneamente
         } else {
           Toast.error(result.error || 'Erro ao salvar.');

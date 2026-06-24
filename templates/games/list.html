@@ -107,13 +107,7 @@
             <a class="button-secondary" href="{{ url_for('games.game_detail', game_id=game.id) }}">Detalhes</a>
             {% if game.status != 'finished' %}
               {% if current_user.is_admin %}
-                <form method="post" action="{{ url_for('games.record_result', game_id=game.id) }}" class="result-form" data-game-id="{{ game.id }}" style="display: flex; gap: 0.4rem; align-items: center; margin: 0; background: var(--gray-light, #f8f9fa); padding: 4px 6px; border-radius: 6px; border: 1px solid var(--border-color, #e2e8f0);">
-                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                  <input type="number" name="home_score" min="0" class="no-spin" style="width: 40px; height: 32px; padding: 0; text-align: center; border: 1px solid var(--border-color, #cbd5e1); border-radius: 4px; font-weight: 700; font-size: 1rem; color: var(--text-color, #333);" required title="Gols {{ game.home_team }}">
-                  <span style="font-weight: 800; font-size: 0.8rem; color: var(--text-color-muted, #718096);">X</span>
-                  <input type="number" name="away_score" min="0" class="no-spin" style="width: 40px; height: 32px; padding: 0; text-align: center; border: 1px solid var(--border-color, #cbd5e1); border-radius: 4px; font-weight: 700; font-size: 1rem; color: var(--text-color, #333);" required title="Gols {{ game.away_team }}">
-                  <button type="submit" class="button-primary" style="height: 32px; padding: 0 12px; font-size: 0.8rem; border-radius: 4px; margin-left: 2px;">Salvar</button>
-                </form>
+                <button type="button" class="button-primary" onclick="openAdminModal('{{ game.id }}', '{{ game.home_team }}', '{{ game.away_team }}')">Lançar Resultado</button>
               {% else %}
                 <a class="button-primary" href="{{ url_for('bets.bet_game', game_id=game.id) }}">Palpitar</a>
               {% endif %}
@@ -261,6 +255,70 @@
 .no-spin {
   -moz-appearance: textfield;
 }
+
+/* Premium Result Form Inline */
+.premium-result-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0;
+  background: linear-gradient(145deg, #ffffff, #f1f5f9);
+  padding: 6px 12px;
+  border-radius: 50px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), inset 0 2px 4px rgba(255, 255, 255, 0.8);
+  border: 1px solid #cbd5e1;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.premium-result-form:focus-within {
+  box-shadow: 0 4px 12px -2px rgba(59, 130, 246, 0.2), inset 0 2px 4px rgba(255, 255, 255, 0.8);
+  border-color: #93c5fd;
+  transform: translateY(-1px);
+}
+.premium-score-input {
+  width: 44px;
+  height: 36px;
+  padding: 0;
+  text-align: center;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--blue-dark);
+  background: var(--white);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+  outline: none;
+  transition: all 0.2s ease;
+}
+.premium-score-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.06), 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+.premium-x {
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  text-transform: lowercase;
+}
+.premium-save-btn {
+  height: 36px;
+  padding: 0 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: 50px;
+  margin-left: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.premium-save-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
 </style>
 
 <script>
@@ -332,45 +390,136 @@ document.addEventListener('DOMContentLoaded', function() {
     el.remove();
   });
 
-  // AJAX para formulários de resultado (admin)
-  document.querySelectorAll('form.result-form').forEach(form => {
+  // AJAX Form Submission
+  document.querySelectorAll('.result-form').forEach(form => {
     form.addEventListener('submit', async function(e) {
       e.preventDefault();
-      const submitBtn = form.querySelector('button[type="submit"]');
+      const fd = new FormData(this);
+      try {
+        const res = await fetch(this.action, {
+          method: 'POST',
+          body: fd,
+          headers: {'X-Requested-With': 'XMLHttpRequest'}
+        });
+        if(res.ok) {
+          window.location.reload();
+        } else {
+          Toast.error('Erro ao salvar resultado');
+        }
+      } catch(err) { console.error(err); }
+    });
+  });
+
+  // Handle modal form submission with AJAX
+  const adminForm = document.getElementById('admin-result-form');
+  if (adminForm) {
+    adminForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const fd = new FormData(this);
+      const submitBtn = this.querySelector('button[type="submit"]');
       const originalText = submitBtn.textContent;
       submitBtn.disabled = true;
-      submitBtn.textContent = '...';
-
-      const formData = new FormData(form);
-      const data = Object.fromEntries(formData.entries());
-
+      submitBtn.textContent = 'Salvando...';
       try {
-        const response = await fetch(form.action, {
+        const res = await fetch(this.action, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(data)
+          body: fd,
+          headers: {'X-Requested-With': 'XMLHttpRequest'}
         });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-          Toast.success(result.message || 'Resultado salvo!');
-          setTimeout(() => window.location.reload(), 500);
+        if(res.ok) {
+          closeAdminModal();
+          window.location.reload();
         } else {
-          Toast.error(result.error || 'Erro ao salvar.');
+          Toast.error('Erro ao salvar resultado');
           submitBtn.disabled = false;
           submitBtn.textContent = originalText;
         }
-      } catch (err) {
-        Toast.error('Erro de conexão.');
+      } catch(err) { 
+        console.error(err); 
+        Toast.error('Erro na conexão');
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
       }
     });
-  });
+  }
 });
+
+function openAdminModal(gameId, homeTeam, awayTeam) {
+  const adminModal = document.getElementById('admin-result-modal');
+  if (!adminModal) return;
+  const adminForm = document.getElementById('admin-result-form');
+  if (adminForm) {
+    adminForm.action = "{{ url_for('games.record_result', game_id=0) }}".replace('0', gameId);
+  }
+  document.getElementById('modal-home-team').textContent = homeTeam;
+  document.getElementById('modal-away-team').textContent = awayTeam;
+  document.getElementById('modal-home-score').value = '';
+  document.getElementById('modal-away-score').value = '';
+  
+  adminModal.style.display = 'flex';
+  adminModal.style.opacity = '1';
+  adminModal.style.pointerEvents = 'auto';
+  adminModal.classList.add('active');
+  setTimeout(() => {
+    const homeScore = document.getElementById('modal-home-score');
+    if (homeScore) homeScore.focus();
+  }, 100);
+}
+
+function closeAdminModal() {
+  const adminModal = document.getElementById('admin-result-modal');
+  if (!adminModal) return;
+  adminModal.style.opacity = '0';
+  adminModal.style.pointerEvents = 'none';
+  adminModal.classList.remove('active');
+  setTimeout(() => {
+    adminModal.style.display = 'none';
+  }, 300);
+}
+
+window.openAdminModal = openAdminModal;
+window.closeAdminModal = closeAdminModal;
+
+// Attach close handlers globally
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('admin-result-modal');
+  if (modal) {
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) closeAdminModal();
+    });
+    const closeBtn = document.getElementById('close-admin-result-modal');
+    if (closeBtn) closeBtn.addEventListener('click', closeAdminModal);
+  }
+});
+
 </script>
+
+<!-- Modal Admin Resultado -->
+<div id="admin-result-modal" class="modal-overlay">
+  <div class="custom-modal" style="max-width: 400px; padding: 2rem; border-radius: 16px; background: linear-gradient(135deg, var(--white), #f8fafc); text-align: center;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+      <h3 style="margin: 0; color: var(--blue-dark); font-weight: 800; font-size: 1.1rem; text-transform: uppercase;">Lançar Resultado Oficial</h3>
+      <button type="button" id="close-admin-result-modal" onclick="closeAdminModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #94a3b8;">&times;</button>
+    </div>
+    
+    <form id="admin-result-form" method="post" action="">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div style="display: flex; justify-content: center; align-items: center; gap: 1.5rem; margin-bottom: 2rem;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem; flex: 1; max-width: 120px;">
+          <label id="modal-home-team" style="font-weight: 700; font-size: 1rem; color: var(--text-color); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;"></label>
+          <input id="modal-home-score" name="home_score" type="number" min="0" class="no-spin premium-score-input" required style="width: 70px; height: 70px; font-size: 2rem; border-radius: 16px;">
+        </div>
+        
+        <span style="font-size: 1.5rem; font-weight: 900; color: #cbd5e1; padding-top: 1.5rem;">X</span>
+        
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem; flex: 1; max-width: 120px;">
+          <label id="modal-away-team" style="font-weight: 700; font-size: 1rem; color: var(--text-color); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;"></label>
+          <input id="modal-away-score" name="away_score" type="number" min="0" class="no-spin premium-score-input" required style="width: 70px; height: 70px; font-size: 2rem; border-radius: 16px;">
+        </div>
+      </div>
+      <button type="submit" class="premium-save-btn" style="width: 100%; height: 48px; border-radius: 50px; font-size: 1rem;">Confirmar Placar</button>
+    </form>
+  </div>
+</div>
+
 {% endblock %}
