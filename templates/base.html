@@ -204,12 +204,16 @@
         if (res.ok) {
           const data = await res.json();
           if (data.notifications && data.notifications.length > 0) {
-            list.innerHTML = data.notifications.map(n => `
-              <div class="notif-item ${n.read ? '' : 'notif-item--unread'}" data-id="${n.id}">
+            list.innerHTML = data.notifications.map(n => {
+              const inner = `
                 <div class="notif-item-title">${n.title}</div>
                 <div class="notif-item-body">${n.body || ''}</div>
-              </div>
-            `).join('');
+              `;
+              if (n.type === 'group_invite' && n.group_id) {
+                return `<a href="/chat/grupos/${n.group_id}" class="notif-item ${n.read ? '' : 'notif-item--unread'}" data-id="${n.id}" style="text-decoration:none; color:inherit;">${inner}</a>`;
+              }
+              return `<div class="notif-item ${n.read ? '' : 'notif-item--unread'}" data-id="${n.id}">${inner}</div>`;
+            }).join('');
           } else {
             list.innerHTML = '<div class="notif-empty">Nenhuma notificação.</div>';
           }
