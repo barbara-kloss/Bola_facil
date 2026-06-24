@@ -30,6 +30,10 @@
     @media (max-width: 768px) {
       .dropdown-menu { width: 100vw; right: -20px; border-radius: 0; }
     }
+    input[type="password"]::-ms-reveal,
+    input[type="password"]::-ms-clear {
+      display: none;
+    }
   </style>
   {% block styles %}{% endblock %}
 </head>

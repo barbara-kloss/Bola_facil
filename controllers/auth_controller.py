@@ -206,7 +206,10 @@ def forgot_password():
             reset_url = request.host_url.rstrip("/") + url_for("auth.reset_password", token=token)
             
             from services.email_service import EmailService
-            EmailService.send_password_reset_email(user.email, user.name, reset_url)
+            sent = EmailService.send_password_reset_email(user.email, user.name, reset_url)
+            
+            if not sent:
+                flash(f"⚠️ MODO DEMO (Sem E-mail): Acesse este link para redefinir sua senha: {reset_url}", "warning")
             
         # Sempre retorna sucesso para não expor quais emails existem na base
         return respond(

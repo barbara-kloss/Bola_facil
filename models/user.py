@@ -133,14 +133,12 @@ class User(UserMixin):
     @staticmethod
     def generate_reset_token(user_id):
         import secrets
-        from datetime import datetime, timedelta, timezone
         
         token = secrets.token_urlsafe(32)
-        expires_at = (datetime.now(timezone.utc) + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
         
         _db().execute(
-            "UPDATE users SET reset_token = ?, reset_token_expires_at = ? WHERE id = ?",
-            (token, expires_at, user_id)
+            "UPDATE users SET reset_token = ?, reset_token_expires_at = CURRENT_TIMESTAMP + interval '1 hour' WHERE id = ?",
+            (token, user_id)
         )
         _db().commit()
         return token
