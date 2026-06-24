@@ -42,6 +42,14 @@ def login():
                 template_kwargs={"template_name_or_list": "auth/login.html", "email": email},
             )
 
+        if getattr(user, 'role', '') == 'inactive':
+            return respond(
+                "Esta conta foi desativada pelo administrador.",
+                ok=False, status=403,
+                template_fn=render_template,
+                template_kwargs={"template_name_or_list": "auth/login.html", "email": email},
+            )
+
         rate_limit.record_success()
         login_user(user)
         if user.is_admin:

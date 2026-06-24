@@ -59,21 +59,6 @@ def alerts():
     return render_template("admin/alerts.html", alerts=all_alerts)
 
 
-@admin_bp.route("/admin/users/<int:user_id>/role", methods=["POST"])
-@admin_required
-def toggle_role(user_id):
-    if str(user_id) == str(current_user.id):
-        return jsonify({"error": "Você não pode alterar seu próprio privilégio."}), 400
-        
-    user = User.get_by_id(user_id)
-    if not user:
-        return jsonify({"error": "Usuário não encontrado."}), 404
-        
-    new_role = "user" if user.is_admin else "admin"
-    User.update_role(user_id, new_role)
-    
-    return jsonify({"success": True, "new_role": new_role})
-
 @admin_bp.route("/admin/users/<int:user_id>/notify", methods=["POST"])
 @admin_required
 def notify_user(user_id):
@@ -99,14 +84,14 @@ def notify_user(user_id):
 
 @admin_bp.route("/admin/users/<int:user_id>", methods=["DELETE"])
 @admin_required
-def delete_user(user_id):
+def deactivate_user(user_id):
     if str(user_id) == str(current_user.id):
-        return jsonify({"error": "Você não pode excluir sua própria conta."}), 400
+        return jsonify({"error": "Você não pode desativar sua própria conta."}), 400
         
     user = User.get_by_id(user_id)
     if not user:
         return jsonify({"error": "Usuário não encontrado."}), 404
         
-    User.delete(user_id)
+    User.update_role(user_id, "inactive")
     
-    return jsonify({"success": True, "message": "Usuário excluído com sucesso!"})
+    return jsonify({"success": True, "message": "Usuário desativado com sucesso!"})
