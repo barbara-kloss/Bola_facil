@@ -488,5 +488,45 @@
       Toast.success('Resultado do jogo atualizado em tempo real!');
     }
   });
+
+  const resultForm = document.querySelector('form.result-form');
+  if (resultForm) {
+    resultForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const submitBtn = resultForm.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Enviando...';
+
+      const formData = new FormData(resultForm);
+      const data = Object.fromEntries(formData.entries());
+
+      try {
+        const response = await fetch(resultForm.action, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          Toast.success(result.message || 'Resultado salvo!');
+          resultForm.remove(); // socket.io will handle the UI update
+        } else {
+          Toast.error(result.error || 'Erro ao salvar.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        }
+      } catch (err) {
+        Toast.error('Erro de conexão.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
+    });
+  }
 </script>
 {% endblock %}

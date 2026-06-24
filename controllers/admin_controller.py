@@ -48,8 +48,9 @@ def dashboard():
 @admin_bp.route("/admin/users")
 @admin_required
 def users():
+    from utils.helpers import format_match_time
     all_users = User.list()
-    return render_template("admin/users.html", users=all_users)
+    return render_template("admin/users.html", users=all_users, format_match_time=format_match_time)
 
 @admin_bp.route("/admin/alerts")
 @admin_required

@@ -99,7 +99,7 @@
             <a class="button-secondary" href="{{ url_for('games.game_detail', game_id=game.id) }}">Detalhes</a>
             {% if game.status != 'finished' %}
               {% if current_user.is_admin %}
-                <form method="post" action="{{ url_for('games.record_result', game_id=game.id) }}" style="display: flex; gap: 0.3rem; align-items: center; margin: 0;">
+                <form method="post" action="{{ url_for('games.record_result', game_id=game.id) }}" class="result-form" data-game-id="{{ game.id }}" style="display: flex; gap: 0.3rem; align-items: center; margin: 0;">
                   <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                   <input type="number" name="home_score" min="0" style="width: 36px; padding: 0.2rem; text-align: center; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.85rem;" required title="Gols {{ game.home_team }}">
                   <span style="font-size: 0.8rem; color: var(--text-color-muted);">x</span>
@@ -312,6 +312,59 @@ document.addEventListener('DOMContentLoaded', function() {
     const message = el.textContent.trim();
     Toast[type](message);
     el.remove();
+  });
+
+  // AJAX para formulários de resultado (admin)
+  document.querySelectorAll('form.result-form').forEach(form => {
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const submitBtn = form.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = '...';
+
+      const formData = new FormData(form);
+      const data = Object.fromEntries(formData.entries());
+
+      try {
+        const response = await fetch(form.action, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          Toast.success(result.message || 'Resultado salvo!');
+          // Atualiza a UI localmente na listagem
+          const matchRow = form.closest('.match-row');
+          if (matchRow) {
+            matchRow.dataset.status = 'finished';
+            const scoreDiv = matchRow.querySelector('.match-score');
+            if (scoreDiv) {
+              scoreDiv.innerHTML = `${data.home_score} x ${data.away_score}`;
+            }
+            const dateDiv = matchRow.querySelector('.match-date');
+            if (dateDiv) {
+              dateDiv.innerHTML = '<span class="status-pill status-finished">Finalizado</span>';
+            }
+            form.remove(); // Remove o form, já que finalizou
+          }
+        } else {
+          Toast.error(result.error || 'Erro ao salvar.');
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        }
+      } catch (err) {
+        Toast.error('Erro de conexão.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
+    });
   });
 });
 </script>
