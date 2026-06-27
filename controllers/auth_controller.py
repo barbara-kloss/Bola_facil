@@ -199,30 +199,21 @@ def forgot_password():
     if request.method == "POST":
         data = request.get_json(silent=True) or request.form
         email = data.get("email", "").strip()
-        password = data.get("password")
-        password_confirm = data.get("password_confirm")
         
-        if not email or not password or not password_confirm:
-            return respond("Todos os campos são obrigatórios.", ok=False, status=400, template_fn=render_template, template_kwargs={"template_name_or_list": "auth/forgot_password.html", "email": email})
-            
-        if len(password) < 6:
-            return respond("A senha deve ter pelo menos 6 caracteres.", ok=False, status=400, template_fn=render_template, template_kwargs={"template_name_or_list": "auth/forgot_password.html", "email": email})
-            
-        if password != password_confirm:
-            return respond("As senhas não coincidem.", ok=False, status=400, template_fn=render_template, template_kwargs={"template_name_or_list": "auth/forgot_password.html", "email": email})
+        if not email:
+            return respond("O e-mail é obrigatório.", ok=False, status=400, template_fn=render_template, template_kwargs={"template_name_or_list": "auth/forgot_password.html", "email": email})
             
         user = User.get_by_email(email)
         if user:
-            User.reset_password(user.id, password)
-            return respond(
-                "Senha atualizada com sucesso. Você já pode fazer login.",
-                ok=True, redirect_to="auth.login"
-            )
-        else:
-            return respond(
-                "E-mail não encontrado.",
-                ok=False, status=404, template_fn=render_template, template_kwargs={"template_name_or_list": "auth/forgot_password.html", "email": email}
-            )
+            from services.email_service import EmailService
+            token = User.generate_reset_token(user.id)
+            reset_url = url_for('auth.reset_password', token=token, _external=True)
+            EmailService.send_password_reset_email(user.email, user.name, reset_url)
+            
+        return respond(
+            "Se o e-mail existir em nossa base, um link de redefinição será enviado.",
+            ok=True, redirect_to="auth.login"
+        )
 
     return render_template("auth/forgot_password.html")
 

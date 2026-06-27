@@ -178,22 +178,32 @@ def _prepare_team_players(start_xi, is_home):
         player = item.get("player", {})
         grid = player.get("grid")
         row, col = None, None
+        
         if grid:
             try:
                 parts = grid.split(":")
                 row = int(parts[0])
                 col = int(parts[1])
-            except ValueError:
+            except (ValueError, AttributeError):
                 pass
+                
         if row is None:
-            pos = player.get("pos", "M")
+            pos = player.get("pos")
+            if not pos:
+                # Distribuir num 4-4-2 padrão se a API não mandar nada
+                if idx == 0: pos = "G"
+                elif idx <= 4: pos = "D"
+                elif idx <= 8: pos = "M"
+                else: pos = "F"
+            
             row = pos_rows.get(pos, 3)
             col = idx
+            
         processed.append({
             "id": player.get("id"),
             "name": player.get("name"),
             "number": player.get("number"),
-            "pos": player.get("pos"),
+            "pos": player.get("pos") or pos,
             "row": row,
             "col": col
         })
